@@ -1,4 +1,5 @@
-import * as D from './data.js?v=2';
+import * as D from './data.js?v=3';
+import { PREFS, BBOX, OKIBOX, project } from './japan.js?v=1';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -15,6 +16,7 @@ const ui = {
   },
   calMonth: null, sel: { start: null, end: null },
   facSlot: null, facMonth: null, facCalSlot: null, checkoutStep: 1,
+  map: { date: null, cats: [], sel: null, region: '全国', vb: null },
 };
 
 function toast(msg) {
@@ -39,9 +41,9 @@ function sweepHolds() {
 
 /* ================= シェル ================= */
 const NAVS = {
-  adv: [['#/', 'ホーム'], ['#/search', '枠検索'], ['#/bookings', '予約管理']],
+  adv: [['#/', 'ホーム'], ['#/search', '枠検索'], ['#/map', '設置マップ'], ['#/bookings', '予約管理']],
   fac: [['#/f', '今日のタスク'], ['#/f/calendar', 'スケジュール']],
-  ops: [['#/admin', 'ダッシュボード']],
+  ops: [['#/admin', 'ダッシュボード'], ['#/map', '設置マップ']],
 };
 
 function header(ctx = '') {
@@ -393,12 +395,18 @@ function viewFacility(id) {
         <div class="panel" style="margin-top:10px">
           <div class="panel-hd">現在設置中<span class="count">競合カテゴリの確認用 / ブランド名は非開示</span></div>
           <div class="panel-bd flush">
-            ${f.currentSamples.length ? `<table class="t">
-              <thead><tr><th>カテゴリ</th><th>設置終了予定</th><th>枠</th></tr></thead>
-              <tbody>${f.currentSamples.map((c) => `<tr>
-                <td>${c.cat === ui.q.category ? `<span class="tag tag-danger">${c.cat}</span>` : `<span class="tag">${c.cat}</span>`}</td>
-                <td class="k">${D.ymd(D.addDays(D.TODAY, c.until))}</td><td class="tiny">${esc(c.slot)}</td></tr>`).join('')}</tbody></table>`
-              : '<div class="panel-bd"><p class="tiny dim" style="margin:0">なし</p></div>'}
+            ${(() => {
+              const placed = D.placementsAt(f.id, D.ymd(D.TODAY));
+              if (!placed.length) return '<div class="panel-bd"><p class="tiny dim" style="margin:0">なし</p></div>';
+              return `<table class="t">
+                <thead><tr><th>カテゴリ</th><th>設置場所</th><th>枠</th><th>終了予定</th><th>出稿</th></tr></thead>
+                <tbody>${placed.map((c) => `<tr>
+                  <td>${c.cat === ui.q.category ? `<span class="tag tag-danger">${c.cat}</span>` : `<span class="tag">${c.cat}</span>`}</td>
+                  <td class="tiny">${D.zoneLabel(c.zone)}</td>
+                  <td class="tiny">${esc(c.slotName)}</td>
+                  <td class="k">${c.until}</td>
+                  <td class="tiny">${c.own ? '<span class="tag tag-accent">自社</span>' : esc(c.advertiser)}</td></tr>`).join('')}</tbody></table>`;
+            })()}
           </div>
         </div>
 
@@ -653,18 +661,23 @@ function viewFacHome() {
         <span>${esc(b.product || b.category)} / ${b.start}〜${b.end} / 所要3分</span></span><span class="ar">▶</span></button>`).join('')}
     </div>
 
-    <div class="panel" style="margin-top:12px">
-      <div class="panel-hd">館内に設置中<span class="count">${f.currentSamples.length + active.length}件</span></div>
-      <div class="panel-bd flush">
-        ${(f.currentSamples.length + active.length) ? `<table class="t">
-          <thead><tr><th>カテゴリ</th><th>枠</th><th>終了予定</th></tr></thead><tbody>
-          ${f.currentSamples.map((c) => `<tr><td>${c.cat}</td><td class="tiny">${esc(c.slot)}</td>
-            <td class="k">${D.ymd(D.addDays(D.TODAY, c.until))}</td></tr>`).join('')}
-          ${active.map((b) => `<tr><td>${esc(b.category)}<span class="tag tag-ok" style="margin-left:5px">受注分</span></td>
-            <td class="tiny">${esc(D.slotById(b.slotId).name)}</td><td class="k">${b.end}</td></tr>`).join('')}
-        </tbody></table>` : '<div class="panel-bd"><p class="tiny dim" style="margin:0">なし</p></div>'}
-      </div>
-    </div>
+    ${(() => {
+      const placed = D.placementsAt(f.id, D.ymd(D.TODAY));
+      const groups = D.ZONES.map((z) => ({ z, items: placed.filter((i) => i.zone === z.code) })).filter((g) => g.items.length);
+      return `<div class="panel" style="margin-top:12px">
+        <div class="panel-hd">館内に設置中<span class="count">${placed.length}件</span></div>
+        <div class="panel-bd flush">
+          ${groups.length ? groups.map((g) => `<div class="zone">
+            <div class="zone-hd">${g.z.label}<span class="dim tiny">${g.items.length}件</span></div>
+            <div class="zone-slot">${g.items.map((i) => `<div class="placed ${i.own ? 'own' : ''}">
+              <span class="tag ${i.own ? 'tag-accent' : ''}">${esc(i.cat)}</span>
+              <span class="tiny">${esc(i.slotName)}</span>
+              <span class="tiny dim">${i.own ? '自社受注' : esc(i.advertiser)}</span>
+              <span class="tiny dim mono" style="margin-left:auto">〜${i.until}</span></div>`).join('')}</div>
+          </div>`).join('') : '<div class="panel-bd"><p class="tiny dim" style="margin:0">なし</p></div>'}
+        </div>
+      </div>`;
+    })()}
 
     <a class="btn btn-lg" href="#/f/calendar" style="margin-top:12px">受入できない日を登録する</a>
   </div>`;
@@ -793,6 +806,202 @@ function notFound(msg = 'ページが見つかりません') {
     <h3>${esc(msg)}</h3><a class="btn btn-sm" href="#/" style="margin-top:8px">ホームへ</a></div></div></div>`;
 }
 
+
+/* ================= 設置マップ ================= */
+const REGION_IDS = {
+  全国: null,
+  関東: ['f01', 'f02', 'f03', 'f06'],
+  東海: ['f05'],
+  関西: ['f04', 'f07', 'f08'],
+};
+
+const MAP_AR = 1.35;                     // 地図パネルの縦横比
+
+function fitAR(x, y, w, h) {
+  if (w / h < MAP_AR) { const nw = h * MAP_AR; x -= (nw - w) / 2; w = nw; }
+  else { const nh = w / MAP_AR; y -= (nh - h) / 2; h = nh; }
+  return { x, y, w, h };
+}
+
+function regionVB(name) {
+  const ids = REGION_IDS[name];
+  if (!ids) {
+    const p = 240;
+    return fitAR(BBOX.x - p, BBOX.y - p, BBOX.w + p * 2, BBOX.h + p * 2);
+  }
+  const pts = ids.map((id) => { const f = D.facilityById(id); return project(f.lng, f.lat); });
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const spanX = Math.max(...xs) - Math.min(...xs);
+  const pad = Math.max(360, spanX * 0.6);
+  return fitAR(Math.min(...xs) - pad, Math.min(...ys) - pad, spanX + pad * 2,
+    (Math.max(...ys) - Math.min(...ys)) + pad * 2);
+}
+
+const FILL_BY_COUNT = ['#FFFFFF', '#C3D9DD', '#79ADB6', '#15616F'];
+
+function viewMap() {
+  const m = ui.map;
+  if (!m.date) m.date = D.ymd(D.TODAY);
+  if (!m.vb) m.vb = regionVB(m.region);
+  const vb = m.vb;
+  const u = vb.w / 860;                  // 画面1pxあたりの地図単位（マーカーを一定サイズに保つ）
+  const summary = D.placementSummary(m.date);
+  const shown = m.cats.length
+    ? summary.filter((x) => x.cats.some((c) => m.cats.includes(c)))
+    : summary;
+  const shownIds = new Set(shown.map((x) => x.f.id));
+  const sel = m.sel ? summary.find((x) => x.f.id === m.sel) : null;
+  const totalItems = summary.reduce((a, x) => a + x.items.length, 0);
+
+  const markers = summary.map((x) => {
+    const [cx, cy] = project(x.f.lng, x.f.lat);
+    const n = Math.min(3, x.items.length);
+    const hit = m.cats.length && x.cats.some((c) => m.cats.includes(c));
+    const dimmed = m.cats.length && !shownIds.has(x.f.id);
+    const half = 9 * u;
+    const isSel = m.sel === x.f.id;
+    return `<g class="mk ${dimmed ? 'off' : ''}" data-mapfid="${x.f.id}" transform="translate(${cx},${cy})">
+      ${isSel ? `<rect x="${-half - 5 * u}" y="${-half - 5 * u}" width="${(half + 5 * u) * 2}" height="${(half + 5 * u) * 2}"
+        fill="none" stroke="#15616F" stroke-width="${2 * u}"/>` : ''}
+      <rect x="${-half}" y="${-half}" width="${half * 2}" height="${half * 2}"
+        fill="${FILL_BY_COUNT[n]}" stroke="${hit ? '#A93A2C' : '#1A2227'}" stroke-width="${(hit ? 2.4 : 1.2) * u}"/>
+      <text x="0" y="${4 * u}" text-anchor="middle" font-size="${11 * u}"
+        font-family="ui-monospace,monospace" font-weight="700"
+        fill="${n >= 2 ? '#fff' : '#1A2227'}">${x.items.length}</text>
+      ${vb.w < 3000 ? `<text x="0" y="${half + 14 * u}" text-anchor="middle" font-size="${11 * u}"
+        fill="#1A2227" style="paint-order:stroke" stroke="#fff" stroke-width="${3 * u}">${esc(x.f.name)}</text>` : ''}
+    </g>`;
+  }).join('');
+
+  return `
+  <div class="wrap">
+    <div class="page-head"><h1>設置マップ</h1>
+      <span class="sub">基準日時点で、どの施設のどこに何が設置されているかを表示します</span></div>
+
+    <div class="panel">
+      <div class="panel-bd">
+        <div class="row row-wrap" style="align-items:flex-end">
+          <div style="width:150px"><label class="f">基準日</label>
+            <input class="inp" type="date" id="mp-date" value="${m.date}"></div>
+          <div><label class="f">表示範囲</label>
+            <div class="chips">${Object.keys(REGION_IDS).map((k) => `<button class="chip ${m.region === k ? 'on' : ''}" data-mapregion="${k}">${k}</button>`).join('')}</div></div>
+          <div style="flex:1;min-width:260px"><label class="f">カテゴリで絞り込み（設置中のものを強調）</label>
+            <div class="chips">${D.CATEGORIES.map((c) => `<button class="chip ${m.cats.includes(c) ? 'on' : ''}" data-mapcat="${c}">${c}</button>`).join('')}
+              ${m.cats.length ? '<button class="chip" id="mp-clear">解除</button>' : ''}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="maplayout" style="margin-top:10px">
+      <div class="panel">
+        <div class="panel-hd">全国の設置状況
+          <span class="count">${m.date} 時点 / ${summary.filter((x) => x.items.length).length}施設に ${totalItems}件</span></div>
+        <div class="panel-bd" style="padding:0;position:relative">
+          <svg class="mapsvg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" role="img" aria-label="提携施設の設置状況マップ">
+            <rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="#E7EDF0"/>
+            <g>${PREFS.map((p) => `<path d="${p.d}" fill="#F7F9FA" stroke="#BFC7CC" stroke-width="${1.2 * u}"/>`).join('')}</g>
+            <rect x="${OKIBOX.x}" y="${OKIBOX.y}" width="${OKIBOX.w}" height="${OKIBOX.h}"
+              fill="none" stroke="#9BA5AB" stroke-width="${1.2 * u}" stroke-dasharray="${5 * u},${4 * u}"/>
+            <text x="${OKIBOX.x + OKIBOX.w / 2}" y="${OKIBOX.y - 6 * u}" text-anchor="middle"
+              font-size="${10 * u}" fill="#838E95">沖縄県（位置は模式）</text>
+            <g>${markers}</g>
+          </svg>
+          <div class="maplegend">
+            <span class="legend">
+              <span>設置件数</span>
+              ${FILL_BY_COUNT.map((c, i) => `<span><i style="background:${c};border-color:#1A2227"></i>${i === 3 ? '3+' : i}</span>`).join('')}
+              <span><i style="background:#fff;border:2px solid #A93A2C"></i>絞り込み中のカテゴリあり</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        ${sel ? facilityZonePanel(sel, m.date) : `
+          <div class="panel"><div class="panel-hd">施設を選択してください</div>
+            <div class="panel-bd"><p class="tiny dim" style="margin:0">
+              地図のマーカーか下の一覧をクリックすると、その施設の館内どこに何が置かれているかを表示します。</p></div></div>`}
+
+        <div class="panel" style="margin-top:10px">
+          <div class="panel-hd">施設一覧<span class="count">${shown.length}件</span></div>
+          <div class="panel-bd flush"><div class="tablewrap"><table class="t rows">
+            <thead><tr><th>施設</th><th class="n">設置</th><th class="n">空き枠</th></tr></thead>
+            <tbody>${shown.map((x) => `<tr data-mapfid="${x.f.id}" ${m.sel === x.f.id ? 'style="background:var(--accent-soft)"' : ''}>
+              <td><b>${esc(x.f.name)}</b><br><span class="tiny dim">${x.f.prefName}${x.f.city}</span></td>
+              <td class="n">${x.items.length}</td>
+              <td class="n">${x.openSlots}/${x.f.slots.length}</td></tr>`).join('')}</tbody>
+          </table></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:10px">
+      <div class="panel-hd">施設 × カテゴリ 設置マトリクス<span class="count">${m.date} 時点</span></div>
+      <div class="panel-bd flush"><div class="tablewrap"><table class="t">
+        <thead><tr><th>施設</th>${D.CATEGORIES.map((c) => `<th class="n" style="writing-mode:horizontal-tb;font-size:10.5px">${c}</th>`).join('')}<th class="n">空き枠</th></tr></thead>
+        <tbody>${summary.map((x) => `<tr data-mapfid="${x.f.id}" style="cursor:pointer">
+          <td><b>${esc(x.f.name)}</b> <span class="tiny dim">${x.f.prefName}</span></td>
+          ${D.CATEGORIES.map((c) => {
+            const it = x.items.filter((i) => i.cat === c);
+            if (!it.length) return '<td class="n dim">·</td>';
+            const own = it.some((i) => i.own);
+            return `<td class="n" title="${esc(it.map((i) => `${i.slotName} / ${i.until}まで`).join(' , '))}">
+              <span class="mx ${own ? 'own' : ''}">${it.length}</span></td>`;
+          }).join('')}
+          <td class="n">${x.openSlots}/${x.f.slots.length}</td></tr>`).join('')}</tbody>
+      </table></div></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="legend"><span><span class="mx">n</span>他社の設置</span><span><span class="mx own">n</span>自社の予約</span>
+      <span>・= 設置なし / セルにカーソルを合わせると枠と終了日が出ます</span></span>
+    </div>
+  </div>`;
+}
+
+function facilityZonePanel(x, date) {
+  const f = x.f;
+  const byZone = D.ZONES.map((z) => ({
+    z,
+    slots: f.slots.filter((s) => D.zoneOf(s.name) === z.code),
+    items: x.items.filter((i) => i.zone === z.code),
+  })).filter((g) => g.slots.length || g.items.length);
+
+  return `
+  <div class="panel">
+    <div class="panel-hd">
+      <span class="thumb" style="background:hsl(${f.hue} 24% 42%)">${esc(f.name.slice(0, 2))}</span>
+      ${esc(f.name)}<span class="count">館内配置 / ${date}</span>
+    </div>
+    <div class="panel-bd flush">
+      ${byZone.map((g) => `
+        <div class="zone">
+          <div class="zone-hd">${g.z.label}<span class="dim tiny">枠 ${g.slots.length}</span></div>
+          ${g.slots.map((s) => {
+            const its = g.items.filter((i) => i.slotId === s.id);
+            const info = D.dayInfo(s.id, date);
+            return `<div class="zone-slot">
+              <div class="spread" style="align-items:flex-start">
+                <div><b class="tiny">${esc(s.name)}</b>
+                  <div class="tiny dim">${D.SLOT_TYPES[s.type].short} / 同時受入 ${s.capacity}</div></div>
+                <span class="tag ${info.capacity === 0 ? 'tag-danger' : info.available ? 'tag-ok' : 'tag-plain'}">
+                  ${info.capacity === 0 ? '受入不可' : info.available ? `空き${info.available}` : '満枠'}</span>
+              </div>
+              ${its.length ? its.map((i) => `<div class="placed ${i.own ? 'own' : ''}">
+                  <span class="tag ${i.own ? 'tag-accent' : ''}">${esc(i.cat)}</span>
+                  <span class="tiny">${i.own ? esc(i.product || '自社出稿') : '他社'}</span>
+                  <span class="tiny dim mono" style="margin-left:auto">〜${i.until}</span>
+                </div>`).join('')
+                : '<div class="tiny dim" style="padding:2px 0 0">設置なし</div>'}
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+    </div>
+    <div class="panel-bd" style="border-top:1px solid var(--line)">
+      <a class="btn btn-sm" href="#/facility/${f.id}">この施設の枠を見る</a>
+    </div>
+  </div>`;
+}
+
 /* ================= ルーター ================= */
 function render() {
   sweepHolds();
@@ -806,6 +1015,7 @@ function render() {
   else if (path[0] === 'checkout') { ui.role = 'adv'; body = viewCheckout(path[1]); }
   else if (path[0] === 'done') { ui.role = 'adv'; body = viewDone(path[1]); }
   else if (path[0] === 'bookings') { ui.role = 'adv'; body = viewBookings(); }
+  else if (path[0] === 'map') { if (ui.role !== 'ops') ui.role = 'adv'; body = viewMap(); ctx = ui.map.date || ''; }
   else if (path[0] === 'f' && path[1] === 'calendar') { ui.role = 'fac'; body = viewFacCalendar(); }
   else if (path[0] === 'f') { ui.role = 'fac'; body = viewFacHome(); }
   else if (path[0] === 'admin') { ui.role = 'ops'; body = viewAdmin(); }
@@ -870,6 +1080,26 @@ function bind() {
     ui.q.start = D.ymd(D.addDays(D.parseYmd(ui.q.start), 7)); ui.sel = { start: null, end: null }; render();
     toast('開始日を1週間ずらしました');
   });
+
+  // 設置マップ
+  const mpDate = $('#mp-date');
+  if (mpDate) mpDate.addEventListener('change', () => { ui.map.date = mpDate.value; render(); });
+  $$('[data-mapregion]').forEach((b) => b.addEventListener('click', () => {
+    ui.map.region = b.dataset.mapregion; ui.map.vb = regionVB(ui.map.region); render();
+  }));
+  $$('[data-mapcat]').forEach((b) => b.addEventListener('click', () => {
+    const c = b.dataset.mapcat;
+    ui.map.cats = ui.map.cats.includes(c) ? ui.map.cats.filter((x) => x !== c) : [...ui.map.cats, c];
+    render();
+  }));
+  const mpClear = $('#mp-clear');
+  if (mpClear) mpClear.addEventListener('click', () => { ui.map.cats = []; render(); });
+  $$('[data-mapfid]').forEach((el) => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const id = el.dataset.mapfid;
+    ui.map.sel = ui.map.sel === id ? null : id;
+    render();
+  }));
 
   // 施設行クリック（検索結果 / ホーム / 運営マスタ）
   $$('tr[data-fid]').forEach((tr) => tr.addEventListener('click', () => {

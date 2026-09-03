@@ -376,3 +376,32 @@ footer.ft .in {
   font-size: 11.5px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
 }
 .skel { background: var(--surface-3); }
+
+/* ============ 設置マップ ============ */
+.maplayout { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 10px; align-items: start; }
+@media (max-width: 980px) { .maplayout { grid-template-columns: 1fr; } }
+.mapsvg { width: 100%; height: auto; display: block; aspect-ratio: 1.35 / 1; border-radius: 0 0 var(--r) var(--r); }
+.mapsvg .mk { cursor: pointer; }
+.mapsvg .mk:hover rect { stroke-width: 3; }
+.mapsvg .mk.off { opacity: .28; }
+.maplegend { padding: 7px 12px; border-top: 1px solid var(--line); background: var(--surface-2); }
+
+.zone { border-bottom: 1px solid var(--line); }
+.zone:last-child { border-bottom: 0; }
+.zone-hd {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  padding: 5px 12px; background: var(--surface-2); font-size: 11.5px; font-weight: 700; color: var(--ink-2);
+}
+.zone-slot { padding: 7px 12px; border-top: 1px dashed var(--line); }
+.zone-slot:first-of-type { border-top: 0; }
+.placed {
+  display: flex; align-items: center; gap: 6px; margin-top: 4px;
+  padding: 3px 7px; background: var(--surface-2); border-left: 2px solid var(--line-3); border-radius: var(--r-sm);
+}
+.placed.own { background: var(--accent-soft); border-left-color: var(--accent); }
+
+.mx {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r-sm);
+  background: var(--line-2); color: var(--ink); font-family: var(--mono); font-size: 11px; font-weight: 700;
+}
+.mx.own { background: var(--accent); color: #fff; }

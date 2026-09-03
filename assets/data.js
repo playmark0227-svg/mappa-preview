@@ -68,7 +68,7 @@ export const AUDIENCE_TAGS = [
 /* ---------- 施設マスタ ---------- */
 export const FACILITIES = [
   {
-    id: 'f01', name: '青葉の湯 横浜青葉', brand: '青葉の湯', pref: '14', prefName: '神奈川県',
+    id: 'f01', lng: 139.5172, lat: 35.5452, name: '青葉の湯 横浜青葉', brand: '青葉の湯', pref: '14', prefName: '神奈川県',
     city: '横浜市青葉区', station: '青葉台駅', walkMin: 8, hours: '10:00–24:00', holiday: null,
     hue: 190, monthlyVisitors: 24000, weekdayRatio: 62, femaleRatio: 52,
     ageMix: { '20代': 18, '30代': 27, '40代': 31, '50代': 16, '60代〜': 8 },
@@ -92,7 +92,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f02', name: 'スパメッツァ 流山', brand: 'スパメッツァ', pref: '12', prefName: '千葉県',
+    id: 'f02', lng: 139.9254, lat: 35.8713, name: 'スパメッツァ 流山', brand: 'スパメッツァ', pref: '12', prefName: '千葉県',
     city: '流山市', station: '流山おおたかの森駅', walkMin: 5, hours: '9:00–25:00', holiday: null,
     hue: 168, monthlyVisitors: 38000, weekdayRatio: 55, femaleRatio: 44,
     ageMix: { '20代': 24, '30代': 30, '40代': 26, '50代': 14, '60代〜': 6 },
@@ -112,7 +112,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f03', name: '御殿山温泉 品川', brand: '御殿山温泉', pref: '13', prefName: '東京都',
+    id: 'f03', lng: 139.7392, lat: 35.622, name: '御殿山温泉 品川', brand: '御殿山温泉', pref: '13', prefName: '東京都',
     city: '品川区', station: '北品川駅', walkMin: 6, hours: '11:00–23:00', holiday: 2,
     hue: 205, monthlyVisitors: 19000, weekdayRatio: 71, femaleRatio: 49,
     ageMix: { '20代': 15, '30代': 33, '40代': 29, '50代': 17, '60代〜': 6 },
@@ -133,7 +133,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f04', name: '有馬の里 神戸北', brand: '有馬の里', pref: '28', prefName: '兵庫県',
+    id: 'f04', lng: 135.2487, lat: 34.7981, name: '有馬の里 神戸北', brand: '有馬の里', pref: '28', prefName: '兵庫県',
     city: '神戸市北区', station: '有馬温泉駅', walkMin: 12, hours: '10:00–23:00', holiday: null,
     hue: 24, monthlyVisitors: 31000, weekdayRatio: 48, femaleRatio: 58,
     ageMix: { '20代': 12, '30代': 22, '40代': 26, '50代': 24, '60代〜': 16 },
@@ -152,7 +152,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f05', name: '天空スパ 名古屋栄', brand: '天空スパ', pref: '23', prefName: '愛知県',
+    id: 'f05', lng: 136.9083, lat: 35.17, name: '天空スパ 名古屋栄', brand: '天空スパ', pref: '23', prefName: '愛知県',
     city: '名古屋市中区', station: '栄駅', walkMin: 4, hours: '24時間', holiday: null,
     hue: 262, monthlyVisitors: 27500, weekdayRatio: 58, femaleRatio: 41,
     ageMix: { '20代': 26, '30代': 31, '40代': 24, '50代': 13, '60代〜': 6 },
@@ -172,7 +172,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f06', name: '大江戸の湯 江東', brand: '大江戸の湯', pref: '13', prefName: '東京都',
+    id: 'f06', lng: 139.8042, lat: 35.6453, name: '大江戸の湯 江東', brand: '大江戸の湯', pref: '13', prefName: '東京都',
     city: '江東区', station: '東雲駅', walkMin: 10, hours: '11:00–翌9:00', holiday: null,
     hue: 340, monthlyVisitors: 42000, weekdayRatio: 51, femaleRatio: 54,
     ageMix: { '20代': 19, '30代': 26, '40代': 27, '50代': 19, '60代〜': 9 },
@@ -197,7 +197,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f07', name: '嵐山 湯どころ', brand: '湯どころ', pref: '26', prefName: '京都府',
+    id: 'f07', lng: 135.6773, lat: 35.0145, name: '嵐山 湯どころ', brand: '湯どころ', pref: '26', prefName: '京都府',
     city: '京都市右京区', station: '嵐山駅', walkMin: 7, hours: '11:00–22:00', holiday: 3,
     hue: 120, monthlyVisitors: 16500, weekdayRatio: 44, femaleRatio: 61,
     ageMix: { '20代': 17, '30代': 24, '40代': 25, '50代': 21, '60代〜': 13 },
@@ -213,7 +213,7 @@ export const FACILITIES = [
     ],
   },
   {
-    id: 'f08', name: '湯treat 大阪本町', brand: '湯treat', pref: '27', prefName: '大阪府',
+    id: 'f08', lng: 135.5002, lat: 34.6823, name: '湯treat 大阪本町', brand: '湯treat', pref: '27', prefName: '大阪府',
     city: '大阪市中央区', station: '本町駅', walkMin: 3, hours: '7:00–24:00', holiday: null,
     hue: 42, monthlyVisitors: 22000, weekdayRatio: 74, femaleRatio: 47,
     ageMix: { '20代': 21, '30代': 34, '40代': 28, '50代': 12, '60代〜': 5 },
@@ -292,32 +292,69 @@ export function resetAll() {
 /* 既存の他社予約は決定的乱数で生成する。
    実際の予約は「連続した期間」で入るので、日ごとの独立乱数ではなく
    期間ブロックを撒く。近い日ほど埋まりやすいよう起点を手前に寄せる。 */
-const bkCache = new Map();
-function baseBookings(slotId) {
-  if (bkCache.has(slotId)) return bkCache.get(slotId);
-  const s = slotById(slotId);
-  const r = rnd('bk:' + slotId);
-  const pop = Math.min(1, s.facility.monthlyVisitors / 42000);
-  const n = Math.round(3 + pop * 6 + s.capacity * 1.2);
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    // pow > 1 で手前に寄せる（近い日ほど埋まっている）
-    const start = Math.floor(Math.pow(r(), 1.5) * (HORIZON_DAYS + 60)) - 20;
-    const dur = s.type === 'SAMPLING' ? 14 + Math.floor(r() * 3) * 7
-      : s.type === 'POSTER' ? 30
-      : 1 + Math.floor(r() * 3);
-    out.push([start, start + dur - 1]);
+const facBlocks = new Map();
+const ADVERTISERS = ['A社', 'B社', 'C社', 'D社', 'E社', 'F社'];
+
+/** 他社の既存予約を施設単位で生成する。
+ *  期間が重なるブロックには同じカテゴリを割り当てないので、
+ *  「同一カテゴリを館内に同時設置しない」という排他ルールと必ず整合する。 */
+function buildFacilityBlocks(facilityId) {
+  if (facBlocks.has(facilityId)) return facBlocks.get(facilityId);
+  const f = facilityById(facilityId);
+  const r = rnd('fb:' + facilityId);
+  const all = [];
+  for (const sl of f.slots) {
+    const slot = slotById(sl.id);
+    const pop = Math.min(1, f.monthlyVisitors / 42000);
+    const n = Math.round(3 + pop * 6 + slot.capacity * 1.2);
+    for (let i = 0; i < n; i++) {
+      const start = Math.floor(Math.pow(r(), 1.5) * (HORIZON_DAYS + 60)) - 20;
+      const dur = slot.type === 'SAMPLING' ? 14 + Math.floor(r() * 3) * 7
+        : slot.type === 'POSTER' ? 30
+        : 1 + Math.floor(r() * 3);
+      all.push({ slotId: sl.id, a: start, b: start + dur - 1 });
+    }
   }
-  bkCache.set(slotId, out);
-  return out;
+  all.sort((x, y) => x.a - y.a);
+  // 施設内のいずれかの枠が排他指定しているカテゴリ = 同時に2件置いてはいけないもの
+  const facExclusive = new Set(f.slots.flatMap((sl) => sl.exclusive));
+  const freeCats = CATEGORIES.filter((c) => !facExclusive.has(c));
+  for (const bl of all) {
+    const slot = slotById(bl.slotId);
+    const pool = slot.exclusive.length ? slot.exclusive : CATEGORIES;
+    const taken = new Set(all.filter((o) => o.cat && o.a <= bl.b && o.b >= bl.a).map((o) => o.cat));
+    let cands = pool.filter((c) => !taken.has(c));
+    if (!cands.length) cands = CATEGORIES.filter((c) => !taken.has(c));
+    // それでも空きが無ければ、重複してよい（どの枠も排他指定していない）カテゴリへ逃がす
+    if (!cands.length) cands = freeCats.length ? freeCats : pool;
+    bl.cat = cands[Math.floor(r() * cands.length) % cands.length];
+    bl.adv = ADVERTISERS[Math.floor(r() * ADVERTISERS.length) % ADVERTISERS.length];
+  }
+  const bySlot = new Map();
+  for (const sl of f.slots) bySlot.set(sl.id, all.filter((x) => x.slotId === sl.id));
+  facBlocks.set(facilityId, bySlot);
+  return bySlot;
 }
+const baseBlocks = (slotId) => buildFacilityBlocks(slotById(slotId).facilityId).get(slotId) || [];
+
 function baseBooked(slotId, dateStr) {
   const s = slotById(slotId);
   if (!s) return 0;
   const off = diffDays(TODAY, parseYmd(dateStr));
   let n = 0;
-  for (const [a, b] of baseBookings(slotId)) if (off >= a && off <= b) n++;
+  for (const bl of baseBlocks(slotId)) if (off >= bl.a && off <= bl.b) n++;
   return Math.min(n, s.capacity);
+}
+/** 指定日にその枠へ入っている他社ブロック（capacity 上限まで） */
+export function blocksOn(slotId, dateStr) {
+  const s = slotById(slotId);
+  const off = diffDays(TODAY, parseYmd(dateStr));
+  return baseBlocks(slotId).filter((bl) => off >= bl.a && off <= bl.b).slice(0, s.capacity);
+}
+/** 期間に重なる他社ブロック */
+export function blocksOverlapping(slotId, start, end) {
+  const a = diffDays(TODAY, parseYmd(start)), b = diffDays(TODAY, parseYmd(end));
+  return baseBlocks(slotId).filter((bl) => bl.a <= b && bl.b >= a);
 }
 
 let invCache = new Map();
@@ -396,14 +433,28 @@ export function checkRange(slotId, start, end, qty = 1, category = null) {
     });
   }
   // 競合カテゴリ排他（確定改訂 R-21: カテゴリは仮押さえ前に確定させる）
-  if (category && s.exclusive.includes(category)) {
-    const conflict = s.facility.currentSamples.find(
-      (cs) => cs.cat === category && ymd(addDays(TODAY, cs.until)) >= start);
-    if (conflict) {
+  // 判定は施設単位。同一カテゴリが館内のどこかに入っていれば不可。
+  if (category) {
+    let until = null;
+    for (const sl of s.facility.slots) {
+      if (!sl.exclusive.includes(category)) continue;
+      for (const bl of blocksOverlapping(sl.id, start, end)) {
+        if (bl.cat === category) {
+          const e = ymd(addDays(TODAY, bl.b));
+          if (!until || e > until) until = e;
+        }
+      }
+      for (const b of state.bookings) {
+        if (b.status !== 'confirmed' && b.status !== 'hold') continue;
+        if (b.slotId !== sl.id || b.category !== category) continue;
+        if (b.start <= end && b.end >= start && (!until || b.end > until)) until = b.end;
+      }
+    }
+    if (until) {
       issues.push({
         code: 'exclusive',
-        msg: `同じカテゴリ（${category}）の出稿が ${fmtDateLong(ymd(addDays(TODAY, conflict.until)))} まで入っているため、この期間は予約できません`,
-        suggestFrom: ymd(addDays(TODAY, conflict.until + 1)),
+        msg: `同じカテゴリ（${category}）が ${fmtDateLong(until)} まで館内に設置されているため、この期間は予約できません`,
+        suggestFrom: ymd(addDays(parseYmd(until), 1)),
       });
     }
   }
@@ -503,4 +554,61 @@ export function conflictingDates(slotId, from, to, newCap, weekday = null) {
     d = addDays(d, 1);
   }
   return out;
+}
+
+
+/* ---------- 館内ゾーン（枠商品がどこに置かれているか） ---------- */
+export const ZONES = [
+  { code: 'entrance', label: 'エントランス・受付' },
+  { code: 'male', label: '男性脱衣所' },
+  { code: 'female', label: '女性脱衣所' },
+  { code: 'bath', label: '大浴場前' },
+  { code: 'lobby', label: 'ロビー・休憩処' },
+  { code: 'corridor', label: '館内通路・サイネージ横' },
+  { code: 'event', label: '催事スペース' },
+];
+export const zoneOf = (name) =>
+  /男性/.test(name) ? 'male'
+  : /女性/.test(name) ? 'female'
+  : /催事/.test(name) ? 'event'
+  : /大浴場/.test(name) ? 'bath'
+  : /ロビー|休憩/.test(name) ? 'lobby'
+  : /エントランス|入口|受付/.test(name) ? 'entrance'
+  : 'corridor';
+export const zoneLabel = (code) => (ZONES.find((z) => z.code === code) || {}).label || code;
+
+/** 指定日に、その施設のどこに何が設置されているか。
+ *  他社分（シード）と自社の確定予約をまとめて返す。 */
+export function placementsAt(facilityId, dateStr) {
+  const f = facilityById(facilityId);
+  const out = [];
+  for (const slot of f.slots) {
+    for (const bl of blocksOn(slot.id, dateStr)) {
+      out.push({
+        zone: zoneOf(slot.name), slotName: slot.name, slotId: slot.id,
+        cat: bl.cat, until: ymd(addDays(TODAY, bl.b)), own: false, advertiser: bl.adv,
+      });
+    }
+  }
+  for (const b of state.bookings) {
+    if (b.status !== 'confirmed') continue;
+    const slot = slotById(b.slotId);
+    if (slot.facilityId !== facilityId) continue;
+    if (dateStr < b.start || dateStr > b.end) continue;
+    out.push({
+      zone: zoneOf(slot.name), slotName: slot.name, slotId: slot.id,
+      cat: b.category, until: b.end, own: true,
+      advertiser: '自社', product: b.product, qty: b.sampleQty, bookingNo: b.no,
+    });
+  }
+  return out;
+}
+
+/** 全施設の指定日の設置状況サマリ */
+export function placementSummary(dateStr) {
+  return FACILITIES.map((f) => {
+    const items = placementsAt(f.id, dateStr);
+    const openSlots = f.slots.filter((s) => dayInfo(s.id, dateStr).available > 0).length;
+    return { f, items, cats: [...new Set(items.map((i) => i.cat))], openSlots };
+  });
 }
