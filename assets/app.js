@@ -1,5 +1,4 @@
-import * as D from './data.js?v=4';
-import { PREFS, BBOX, OKIBOX, OKI_OFFSET, project } from './japan.js?v=2';
+import * as D from './data.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -16,10 +15,7 @@ const REGIONS = {
   中国四国: ['31', '32', '33', '34', '35', '36', '37', '38', '39'],
   九州沖縄: ['40', '41', '42', '43', '44', '45', '46', '47'],
 };
-/* 沖縄はインセット表示のため、地図上の座標をずらす */
-const facXY = (f) => (f.pref === '47'
-  ? project(f.lng + OKI_OFFSET.dx, f.lat + OKI_OFFSET.dy)
-  : project(f.lng, f.lat));
+
 
 const ui = {
   role: 'adv',
@@ -850,70 +846,65 @@ function notFound(msg = 'ページが見つかりません') {
 
 
 /* ================= 設置マップ ================= */
+/* 実際のタイル地図（Leaflet）。既定は国土地理院タイルでAPIキー不要。
+   Google Maps は利用者が自分のAPIキーを入れたときだけ使う。 */
+
+const BASEMAPS = {
+  gsi_pale: {
+    label: '地理院タイル（淡色）',
+    url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
+    maxZoom: 18,
+  },
+  gsi_std: {
+    label: '地理院タイル（標準）',
+    url: 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+    attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
+    maxZoom: 18,
+  },
+  gsi_photo: {
+    label: '地理院タイル（航空写真）',
+    url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+    attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
+    maxZoom: 18,
+  },
+  osm: {
+    label: 'OpenStreetMap',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  google: { label: 'Google Maps（APIキーが必要）', google: true, maxZoom: 20 },
+};
+
 const MAP_REGIONS = ['全国', '北海道', '東北', '関東', '北陸甲信', '東海', '関西', '中国四国', '九州沖縄'];
+const GKEY = 'mappa.gmapkey';
+const getGKey = () => { try { return localStorage.getItem(GKEY) || ''; } catch (e) { return ''; } };
+const setGKey = (v) => { try { v ? localStorage.setItem(GKEY, v) : localStorage.removeItem(GKEY); } catch (e) {} };
 
-const MAP_AR = 1.35;                     // 地図パネルの縦横比
-
-function fitAR(x, y, w, h) {
-  if (w / h < MAP_AR) { const nw = h * MAP_AR; x -= (nw - w) / 2; w = nw; }
-  else { const nh = w / MAP_AR; y -= (nh - h) / 2; h = nh; }
-  return { x, y, w, h };
-}
-
-function regionVB(name) {
+function regionBounds(name) {
   const prefs = REGIONS[name];
-  if (!prefs || name === '全国') {
-    const p = 240;
-    return fitAR(BBOX.x - p, BBOX.y - p, BBOX.w + p * 2, BBOX.h + p * 2);
-  }
-  const list = D.FACILITIES.filter((f) => prefs.includes(f.pref));
-  if (!list.length) return regionVB('全国');
-  const pts = list.map(facXY);
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const spanX = Math.max(...xs) - Math.min(...xs);
-  const pad = Math.max(360, spanX * 0.6);
-  return fitAR(Math.min(...xs) - pad, Math.min(...ys) - pad, spanX + pad * 2,
-    (Math.max(...ys) - Math.min(...ys)) + pad * 2);
+  const list = (!prefs || name === '全国') ? D.FACILITIES : D.FACILITIES.filter((f) => prefs.includes(f.pref));
+  const src = list.length ? list : D.FACILITIES;
+  return [
+    [Math.min(...src.map((f) => f.lat)), Math.min(...src.map((f) => f.lng))],
+    [Math.max(...src.map((f) => f.lat)), Math.max(...src.map((f) => f.lng))],
+  ];
 }
 
-const FILL_BY_COUNT = ['#FFFFFF', '#C3D9DD', '#79ADB6', '#15616F'];
-const MAP_REF_W = 860;                   // マーカーの画面サイズを決める基準 viewBox 幅
-const MAP_MIN_W = 120;                   // 最大ズーム（経度0.3度 ≒ 27km幅）
-const mapMaxW = () => regionVB('全国').w * 1.2;
+const FILL_BY_COUNT = ['#FFFFFF', '#C3D9DD', '#5E9AA5', '#15616F'];
 
 function viewMap() {
   const m = ui.map;
   if (!m.date) m.date = D.ymd(D.TODAY);
-  if (!m.vb) m.vb = regionVB(m.region);
-  const vb = m.vb;
-  const u = vb.w / 860;                  // 画面1pxあたりの地図単位（マーカーを一定サイズに保つ）
+  if (!m.base) m.base = 'gsi_pale';
   const summary = D.placementSummary(m.date);
   const shown = m.cats.length
     ? summary.filter((x) => x.cats.some((c) => m.cats.includes(c)))
     : summary;
-  const shownIds = new Set(shown.map((x) => x.f.id));
   const sel = m.sel ? summary.find((x) => x.f.id === m.sel) : null;
   const totalItems = summary.reduce((a, x) => a + x.items.length, 0);
-
-  const k0 = vb.w / MAP_REF_W;           // マーカーを画面上で一定サイズに保つための倍率
-  const markers = summary.map((x) => {
-    const [cx, cy] = facXY(x.f);
-    const n = Math.min(3, x.items.length);
-    const hit = m.cats.length && x.cats.some((c) => m.cats.includes(c));
-    const dimmed = m.cats.length && !shownIds.has(x.f.id);
-    const isSel = m.sel === x.f.id;
-    return `<g class="mk ${dimmed ? 'off' : ''}" data-mapfid="${x.f.id}" data-scale data-cx="${cx}" data-cy="${cy}"
-      transform="translate(${cx},${cy}) scale(${k0})">
-      ${isSel ? '<rect x="-14" y="-14" width="28" height="28" fill="none" stroke="#15616F" stroke-width="2"/>' : ''}
-      <rect x="-9" y="-9" width="18" height="18"
-        fill="${FILL_BY_COUNT[n]}" stroke="${hit ? '#A93A2C' : '#1A2227'}" stroke-width="${hit ? 2.4 : 1.2}"/>
-      <text x="0" y="4" text-anchor="middle" font-size="11"
-        font-family="ui-monospace,monospace" font-weight="700"
-        fill="${n >= 2 ? '#fff' : '#1A2227'}">${x.items.length}</text>
-      <text class="mk-label" x="0" y="23" text-anchor="middle" font-size="11"
-        fill="#1A2227" style="paint-order:stroke" stroke="#fff" stroke-width="3">${esc(x.f.name)}</text>
-    </g>`;
-  }).join('');
+  const needKey = m.base === 'google' && !getGKey();
 
   return `
   <div class="wrap">
@@ -921,46 +912,44 @@ function viewMap() {
       <span class="sub">基準日時点で、どの施設のどこに何が設置されているかを表示します</span></div>
 
     <div class="panel">
-      <div class="panel-bd">
-        <div class="row row-wrap" style="align-items:flex-end">
-          <div style="width:150px"><label class="f">基準日</label>
-            <input class="inp" type="date" id="mp-date" value="${m.date}"></div>
-          <div><label class="f">表示範囲</label>
-            <div class="chips">${MAP_REGIONS.map((k) => `<button class="chip ${m.region === k ? 'on' : ''}" data-mapregion="${k}">${k}</button>`).join('')}</div></div>
-          <div style="flex:1;min-width:260px"><label class="f">カテゴリで絞り込み（設置中のものを強調）</label>
-            <div class="chips">${D.CATEGORIES.map((c) => `<button class="chip ${m.cats.includes(c) ? 'on' : ''}" data-mapcat="${c}">${c}</button>`).join('')}
-              ${m.cats.length ? '<button class="chip" id="mp-clear">解除</button>' : ''}</div></div>
-        </div>
+      <div class="toolbar">
+        <div style="width:140px"><label class="f">基準日</label>
+          <input class="inp" type="date" id="mp-date" value="${m.date}"></div>
+        <div style="width:190px"><label class="f">地図</label>
+          <select class="inp" id="mp-base">
+            ${Object.entries(BASEMAPS).map(([k, v]) => `<option value="${k}" ${m.base === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+          </select></div>
+        <div><label class="f">表示範囲</label>
+          <div class="chips">${MAP_REGIONS.map((k) => `<button class="chip ${m.region === k ? 'on' : ''}" data-mapregion="${k}">${k}</button>`).join('')}</div></div>
+        <div style="flex:1;min-width:240px"><label class="f">カテゴリで絞り込み（設置中のものを強調）</label>
+          <div class="chips">${D.CATEGORIES.map((c) => `<button class="chip ${m.cats.includes(c) ? 'on' : ''}" data-mapcat="${c}">${c}</button>`).join('')}
+            ${m.cats.length ? '<button class="chip" id="mp-clear">解除</button>' : ''}</div></div>
       </div>
+      ${needKey ? `
+        <div class="panel-bd" style="border-bottom:1px solid var(--line-2)">
+          <div class="note note-warn" style="margin-bottom:8px">
+            <span class="lb">要設定</span>Google Maps を使うには Google Cloud で発行した Maps JavaScript API のキーが必要です。
+            キーは<b>このブラウザにのみ保存</b>され、サーバーには送信しません。
+          </div>
+          <div class="row">
+            <input class="inp" id="mp-gkey" placeholder="Google Maps API キーを貼り付け" style="max-width:420px" autocomplete="off">
+            <button class="btn btn-sm" id="mp-gkey-save">保存して切り替え</button>
+            <span class="tiny dim">キーがない間は地理院タイルを表示します</span>
+          </div>
+        </div>` : ''}
     </div>
 
-    <div class="maplayout" style="margin-top:10px">
+    <div class="maplayout" style="margin-top:8px">
       <div class="panel">
         <div class="panel-hd">全国の設置状況
           <span class="count">${m.date} 時点 / ${summary.filter((x) => x.items.length).length}施設に ${totalItems}件</span></div>
         <div class="panel-bd" style="padding:0;position:relative">
-          <svg class="mapsvg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" tabindex="0"
-            role="img" aria-label="提携施設の設置状況マップ。ピンチまたはホイールで拡大縮小、ドラッグで移動できます。">
-            <rect class="map-bg" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="#E7EDF0"/>
-            <g>${PREFS.map((p) => `<path d="${p.d}" fill="#F7F9FA" stroke="#BFC7CC" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join('')}</g>
-            <rect x="${OKIBOX.x}" y="${OKIBOX.y}" width="${OKIBOX.w}" height="${OKIBOX.h}"
-              fill="none" stroke="#9BA5AB" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="4 3"/>
-            <g data-scale data-cx="${OKIBOX.x + OKIBOX.w / 2}" data-cy="${OKIBOX.y - 6}"
-               transform="translate(${OKIBOX.x + OKIBOX.w / 2},${OKIBOX.y - 6}) scale(${k0})">
-              <text text-anchor="middle" font-size="10" fill="#838E95">沖縄県（位置は模式）</text>
-            </g>
-            <g>${markers}</g>
-          </svg>
-          <div class="mapzoom">
-            <button id="mz-in" title="拡大（＋キー）" aria-label="拡大">＋</button>
-            <button id="mz-out" title="縮小（−キー）" aria-label="縮小">−</button>
-            <button id="mz-fit" title="表示範囲に戻す（0キー）" aria-label="表示範囲に戻す">⟲</button>
-          </div>
+          <div id="lmap" class="lmap"></div>
           <div class="maplegend">
             <span class="legend">
               <span>設置件数</span>
-              ${FILL_BY_COUNT.map((c, i) => `<span><i style="background:${c};border-color:#1A2227"></i>${i === 3 ? '3+' : i}</span>`).join('')}
-              <span><i style="background:#fff;border:2px solid #A93A2C"></i>絞り込み中のカテゴリあり</span>
+              ${FILL_BY_COUNT.map((c, i) => `<span><i style="background:${c};border-color:#1B2126"></i>${i === 3 ? '3+' : i}</span>`).join('')}
+              <span><i style="background:#fff;border:2px solid #A33227"></i>絞り込み中のカテゴリあり</span>
             </span>
             <span class="maphint">ピンチ / ホイールで拡大縮小・ドラッグで移動</span>
           </div>
@@ -973,11 +962,11 @@ function viewMap() {
             <div class="panel-bd"><p class="tiny dim" style="margin:0">
               地図のマーカーか下の一覧をクリックすると、その施設の館内どこに何が置かれているかを表示します。</p></div></div>`}
 
-        <div class="panel" style="margin-top:10px">
+        <div class="panel" style="margin-top:8px">
           <div class="panel-hd">施設一覧<span class="count">${shown.length}件</span></div>
           <div class="panel-bd flush"><div class="tablewrap scrolly"><table class="t rows">
             <thead><tr><th>施設</th><th class="n">設置</th><th class="n">空き枠</th></tr></thead>
-            <tbody>${shown.map((x) => `<tr data-mapfid="${x.f.id}" ${m.sel === x.f.id ? 'style="background:var(--accent-soft)"' : ''}>
+            <tbody>${shown.map((x) => `<tr data-mapfid="${x.f.id}" ${m.sel === x.f.id ? 'style="background:var(--blue-row)"' : ''}>
               <td><b>${esc(x.f.name)}</b><br><span class="tiny dim">${x.f.prefName}${x.f.city}</span></td>
               <td class="n">${x.items.length}</td>
               <td class="n">${x.openSlots}/${x.f.slots.length}</td></tr>`).join('')}</tbody>
@@ -986,10 +975,10 @@ function viewMap() {
       </div>
     </div>
 
-    <div class="panel" style="margin-top:10px">
+    <div class="panel" style="margin-top:8px">
       <div class="panel-hd">施設 × カテゴリ 設置マトリクス<span class="count">${m.date} 時点</span></div>
       <div class="panel-bd flush"><div class="tablewrap scrolly"><table class="t">
-        <thead><tr><th>施設</th>${D.CATEGORIES.map((c) => `<th class="n" style="writing-mode:horizontal-tb;font-size:10.5px">${c}</th>`).join('')}<th class="n">空き枠</th></tr></thead>
+        <thead><tr><th>施設</th>${D.CATEGORIES.map((c) => `<th class="n" style="font-size:10.5px">${c}</th>`).join('')}<th class="n">空き枠</th></tr></thead>
         <tbody>${summary.map((x) => `<tr data-mapfid="${x.f.id}" style="cursor:pointer">
           <td><b>${esc(x.f.name)}</b> <span class="tiny dim">${x.f.prefName}</span></td>
           ${D.CATEGORIES.map((c) => {
@@ -1002,7 +991,7 @@ function viewMap() {
           <td class="n">${x.openSlots}/${x.f.slots.length}</td></tr>`).join('')}</tbody>
       </table></div></div>
     </div>
-    <div class="row" style="margin-top:8px">
+    <div class="row" style="margin-top:6px">
       <span class="legend"><span><span class="mx">n</span>他社の設置</span><span><span class="mx own">n</span>自社の予約</span>
       <span>・= 設置なし / セルにカーソルを合わせると枠と終了日が出ます</span></span>
     </div>
@@ -1053,150 +1042,133 @@ function facilityZonePanel(x, date) {
   </div>`;
 }
 
+/* ---------- 地図の生成（Leaflet / Google） ---------- */
+let mapObj = null;
 
-/* ---------- 地図のピンチ・ホイール・ドラッグ操作 ---------- */
-function attachMapZoom() {
-  const svg = $('.mapsvg');
-  if (!svg) return;
-  let vb = { ...ui.map.vb };
-  const scaled = $$('[data-scale]', svg);
-  const bg = $('.map-bg', svg);
-
-  const apply = () => {
-    svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
-    const k = vb.w / MAP_REF_W;
-    for (const g of scaled) {
-      g.setAttribute('transform', `translate(${g.dataset.cx},${g.dataset.cy}) scale(${k})`);
-    }
-    if (bg) {
-      bg.setAttribute('x', vb.x); bg.setAttribute('y', vb.y);
-      bg.setAttribute('width', vb.w); bg.setAttribute('height', vb.h);
-    }
-    const showLabels = vb.w < 3200;
-    $$('.mk-label', svg).forEach((t) => { t.style.display = showLabels ? '' : 'none'; });
-    ui.map.vb = { ...vb };
-  };
-
-  // 全体像から離れすぎないように寄せる
-  const clamp = () => {
-    const full = regionVB('全国');
-    const maxW = mapMaxW();
-    if (vb.w > maxW) { const f = maxW / vb.w; vb.w *= f; vb.h *= f; }
-    const cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2;
-    const minX = full.x, maxX = full.x + full.w;
-    const minY = full.y, maxY = full.y + full.h;
-    if (cx < minX) vb.x += minX - cx;
-    if (cx > maxX) vb.x += maxX - cx;
-    if (cy < minY) vb.y += minY - cy;
-    if (cy > maxY) vb.y += maxY - cy;
-  };
-
-  const toSvg = (clientX, clientY) => {
-    const r = svg.getBoundingClientRect();
-    return [vb.x + ((clientX - r.left) / r.width) * vb.w,
-            vb.y + ((clientY - r.top) / r.height) * vb.h];
-  };
-  const perPx = () => vb.w / (svg.getBoundingClientRect().width || 1);
-
-  const markCustom = () => {
-    ui.map.region = null;
-    $$('[data-mapregion]').forEach((b) => b.classList.remove('on'));
-  };
-
-  const zoomAt = (clientX, clientY, factor) => {
-    const target = Math.min(mapMaxW(), Math.max(MAP_MIN_W, vb.w * factor));
-    const f = target / vb.w;
-    if (f === 1) return;
-    const [px, py] = toSvg(clientX, clientY);
-    vb = { x: px - (px - vb.x) * f, y: py - (py - vb.y) * f, w: vb.w * f, h: vb.h * f };
-    clamp(); apply(); markCustom();
-  };
-
-  // --- ホイール / トラックパッドのピンチ ---
-  svg.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    // ctrlKey が立つのはトラックパッドのピンチ。感度を上げる
-    const f = Math.exp(e.deltaY * (e.ctrlKey ? 0.012 : 0.0022));
-    zoomAt(e.clientX, e.clientY, f);
-  }, { passive: false });
-
-  // --- ポインタ（1本=移動 / 2本=ピンチ） ---
-  const pts = new Map();
-  let pinch = null, moved = 0;
-
-  svg.addEventListener('pointerdown', (e) => {
-    svg.setPointerCapture(e.pointerId);
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    moved = 0;
-    svg.dataset.drag = '0';
-    if (pts.size === 2) {
-      const [a, b] = [...pts.values()];
-      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
-    }
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const el = document.createElement('script');
+    el.src = src; el.async = true;
+    el.onload = () => res(); el.onerror = () => rej(new Error('load failed: ' + src));
+    document.head.appendChild(el);
   });
+}
+function loadCss(href) {
+  if ([...document.styleSheets].some((s) => s.href === href)) return;
+  const el = document.createElement('link');
+  el.rel = 'stylesheet'; el.href = href;
+  document.head.appendChild(el);
+}
 
-  svg.addEventListener('pointermove', (e) => {
-    if (!pts.has(e.pointerId)) return;
-    const prev = pts.get(e.pointerId);
-    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    moved += Math.abs(dx) + Math.abs(dy);
-    if (moved > 5) svg.dataset.drag = '1';
+async function ensureLeaflet() {
+  loadCss('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css');
+  if (!window.L) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js');
+  return window.L;
+}
+async function ensureGoogle(key) {
+  if (window.google && window.google.maps) return window.google;
+  await loadScript('https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&language=ja&region=JP&v=weekly');
+  return window.google;
+}
 
-    if (pts.size >= 2) {
-      const [a, b] = [...pts.values()];
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
-      if (pinch && d > 0) {
-        // 指の間隔が広がる = 拡大 = viewBox を狭める
-        zoomAt(cx, cy, pinch.d / d);
-        // 2本指の移動ぶんパンする
-        const k = perPx();
-        vb.x -= (cx - pinch.cx) * k; vb.y -= (cy - pinch.cy) * k;
-        clamp(); apply();
-      }
-      pinch = { d, cx, cy };
+function markerHTML(x, m) {
+  const n = Math.min(3, x.items.length);
+  const hit = m.cats.length && x.cats.some((c) => m.cats.includes(c));
+  const dim = m.cats.length && !hit;
+  const isSel = m.sel === x.f.id;
+  return `<span class="mkbox${dim ? ' off' : ''}${isSel ? ' sel' : ''}"
+    style="background:${FILL_BY_COUNT[n]};border-color:${hit ? '#A33227' : '#1B2126'};
+           border-width:${hit ? 2 : 1.5}px;color:${n >= 2 ? '#fff' : '#1B2126'}">${x.items.length}</span>`;
+}
+
+async function initMap() {
+  const el = $('#lmap');
+  if (!el) return;
+  const m = ui.map;
+  const summary = D.placementSummary(m.date);
+
+  if (m.base === 'google' && getGKey()) {
+    try { await initGoogleMap(el, summary); return; }
+    catch (e) {
+      el.innerHTML = '<div class="empty"><h3>Google Maps を読み込めませんでした</h3>'
+        + '<p>APIキーが有効か、Maps JavaScript API が有効化されているかご確認ください。</p></div>';
       return;
     }
-    // 1本指 / マウスドラッグ = パン
-    const k = perPx();
-    vb.x -= dx * k; vb.y -= dy * k;
-    clamp(); apply();
-  });
+  }
 
-  const release = (e) => {
-    pts.delete(e.pointerId);
-    if (pts.size < 2) pinch = null;
-    if (pts.size === 0) setTimeout(() => { svg.dataset.drag = '0'; }, 0);
+  const L = await ensureLeaflet();
+  const base = BASEMAPS[m.base] && !BASEMAPS[m.base].google ? BASEMAPS[m.base] : BASEMAPS.gsi_pale;
+  const map = L.map(el, {
+    zoomControl: true, attributionControl: true,
+    scrollWheelZoom: true, wheelPxPerZoomLevel: 90,
+  });
+  mapObj = { kind: 'leaflet', map };
+  window.__mappaMap = mapObj;   // 動作確認用
+  L.tileLayer(base.url, { maxZoom: base.maxZoom, attribution: base.attr }).addTo(map);
+
+  if (m.view) map.setView(m.view.center, m.view.zoom);
+  else map.fitBounds(regionBounds(m.region || '全国'), { padding: [28, 28] });
+
+  const labelZoom = 9;
+  const markers = [];
+  for (const x of summary) {
+    const mk = L.marker([x.f.lat, x.f.lng], {
+      icon: L.divIcon({ className: 'mkw', html: markerHTML(x, m), iconSize: [22, 22], iconAnchor: [11, 11] }),
+      title: x.f.name,
+    }).addTo(map);
+    mk.on('click', () => { ui.map.sel = ui.map.sel === x.f.id ? null : x.f.id; render(); });
+    mk.bindTooltip(x.f.name + '（設置 ' + x.items.length + '件）', { direction: 'right', offset: [12, 0] });
+    markers.push({ mk, x });
+  }
+  const syncLabels = () => {
+    const permanent = map.getZoom() >= labelZoom;
+    for (const { mk, x } of markers) {
+      mk.unbindTooltip();
+      mk.bindTooltip(permanent ? x.f.name : x.f.name + '（設置 ' + x.items.length + '件）',
+        { direction: 'right', offset: [12, 0], permanent, className: 'mklabel' });
+    }
   };
-  svg.addEventListener('pointerup', release);
-  svg.addEventListener('pointercancel', release);
-  svg.addEventListener('pointerleave', release);
-
-  // --- ボタン / キーボード ---
-  const centerZoom = (f) => {
-    const r = svg.getBoundingClientRect();
-    zoomAt(r.left + r.width / 2, r.top + r.height / 2, f);
-  };
-  $('#mz-in').addEventListener('click', () => centerZoom(1 / 1.5));
-  $('#mz-out').addEventListener('click', () => centerZoom(1.5));
-  $('#mz-fit').addEventListener('click', () => {
-    ui.map.region = ui.map.region || '全国';
-    ui.map.vb = regionVB(ui.map.region);
-    render();
+  syncLabels();
+  map.on('zoomend', syncLabels);
+  map.on('moveend', () => {
+    const c = map.getCenter();
+    ui.map.view = { center: [c.lat, c.lng], zoom: map.getZoom() };
   });
-  svg.addEventListener('keydown', (e) => {
-    const step = vb.w * 0.15;
-    if (e.key === '+' || e.key === '=') { centerZoom(1 / 1.5); e.preventDefault(); }
-    else if (e.key === '-' || e.key === '_') { centerZoom(1.5); e.preventDefault(); }
-    else if (e.key === '0') { ui.map.vb = regionVB(ui.map.region || '全国'); render(); e.preventDefault(); }
-    else if (e.key === 'ArrowLeft') { vb.x -= step; clamp(); apply(); e.preventDefault(); }
-    else if (e.key === 'ArrowRight') { vb.x += step; clamp(); apply(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { vb.y -= step; clamp(); apply(); e.preventDefault(); }
-    else if (e.key === 'ArrowDown') { vb.y += step; clamp(); apply(); e.preventDefault(); }
-  });
+}
 
-  apply();
+async function initGoogleMap(el, summary) {
+  const m = ui.map;
+  const g = await ensureGoogle(getGKey());
+  const b = regionBounds(m.region || '全国');
+  const map = new g.maps.Map(el, {
+    mapTypeId: 'roadmap', mapTypeControl: true, streetViewControl: false,
+    center: m.view ? { lat: m.view.center[0], lng: m.view.center[1] } : { lat: 36.5, lng: 138 },
+    zoom: m.view ? m.view.zoom : 5,
+  });
+  mapObj = { kind: 'google', map };
+  window.__mappaMap = mapObj;   // 動作確認用
+  if (!m.view) {
+    const bounds = new g.maps.LatLngBounds({ lat: b[0][0], lng: b[0][1] }, { lat: b[1][0], lng: b[1][1] });
+    map.fitBounds(bounds, 40);
+  }
+  for (const x of summary) {
+    const n = Math.min(3, x.items.length);
+    const hit = m.cats.length && x.cats.some((c) => m.cats.includes(c));
+    const mk = new g.maps.Marker({
+      position: { lat: x.f.lat, lng: x.f.lng }, map, title: x.f.name + '（設置 ' + x.items.length + '件）',
+      label: { text: String(x.items.length), color: n >= 2 ? '#ffffff' : '#1B2126', fontSize: '11px', fontWeight: '700' },
+      icon: {
+        path: 'M -10 -10 H 10 V 10 H -10 Z',
+        fillColor: FILL_BY_COUNT[n], fillOpacity: m.cats.length && !hit ? 0.3 : 1,
+        strokeColor: hit ? '#A33227' : '#1B2126', strokeWeight: hit ? 2 : 1.5, scale: 1,
+      },
+    });
+    mk.addListener('click', () => { ui.map.sel = ui.map.sel === x.f.id ? null : x.f.id; render(); });
+  }
+  map.addListener('idle', () => {
+    const c = map.getCenter();
+    if (c) ui.map.view = { center: [c.lat(), c.lng()], zoom: map.getZoom() };
+  });
 }
 
 /* ================= ルーター ================= */
@@ -1283,8 +1255,16 @@ function bind() {
   // 設置マップ
   const mpDate = $('#mp-date');
   if (mpDate) mpDate.addEventListener('change', () => { ui.map.date = mpDate.value; render(); });
+  const mpBase = $('#mp-base');
+  if (mpBase) mpBase.addEventListener('change', () => { ui.map.base = mpBase.value; ui.map.view = null; render(); });
+  const gsave = $('#mp-gkey-save');
+  if (gsave) gsave.addEventListener('click', () => {
+    const v = $('#mp-gkey').value.trim();
+    if (!v) { toast('APIキーを入力してください'); return; }
+    setGKey(v); ui.map.view = null; toast('Google Maps に切り替えました'); render();
+  });
   $$('[data-mapregion]').forEach((b) => b.addEventListener('click', () => {
-    ui.map.region = b.dataset.mapregion; ui.map.vb = regionVB(ui.map.region); render();
+    ui.map.region = b.dataset.mapregion; ui.map.view = null; render();
   }));
   $$('[data-mapcat]').forEach((b) => b.addEventListener('click', () => {
     const c = b.dataset.mapcat;
@@ -1293,7 +1273,7 @@ function bind() {
   }));
   const mpClear = $('#mp-clear');
   if (mpClear) mpClear.addEventListener('click', () => { ui.map.cats = []; render(); });
-  attachMapZoom();
+  if ($('#lmap')) initMap();
   $$('[data-mapfid]').forEach((el) => el.addEventListener('click', (e) => {
     e.stopPropagation();
     // 地図をドラッグしただけのときは選択しない

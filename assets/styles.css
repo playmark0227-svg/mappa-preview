@@ -397,26 +397,26 @@ table.kv th { width: 128px; background: var(--head); font-weight: 600; font-size
 /* ================= マップ ================= */
 .maplayout { display: grid; grid-template-columns: minmax(0,1fr) 316px; gap: 8px; align-items: start; }
 @media (max-width: 980px) { .maplayout { grid-template-columns: 1fr; } }
-.mapsvg { width: 100%; height: auto; display: block; aspect-ratio: 1.35 / 1; touch-action: none; cursor: grab; }
-.mapsvg:active { cursor: grabbing; }
-.mapsvg:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
-.mapsvg .mk { cursor: pointer; }
-.mapsvg .mk:hover rect { stroke-width: 3; }
-.mapsvg .mk.off { opacity: .25; }
+.lmap { width: 100%; height: 560px; background: #E8ECEF; }
+@media (max-width: 980px) { .lmap { height: 380px; } }
+.lmap .leaflet-container { font-family: var(--sans); }
+.mkbox {
+  width: 22px; height: 22px; display: grid; place-items: center; border-radius: var(--r);
+  border: 1.5px solid #1B2126; font-family: var(--mono); font-size: 11px; font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25); cursor: pointer;
+}
+.mkbox.off { opacity: .35; }
+.mkbox.sel { outline: 2px solid var(--blue); outline-offset: 2px; }
+.leaflet-tooltip.mklabel {
+  background: rgba(255,255,255,.92); border: 1px solid var(--line-2); color: var(--ink);
+  font-size: 11px; padding: 0 4px; border-radius: var(--r); box-shadow: none;
+}
+.leaflet-tooltip.mklabel::before { display: none; }
+.leaflet-control-attribution { font-size: 10px; }
 .maplegend {
   padding: 5px 10px; border-top: 1px solid var(--line); background: var(--head);
   display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
 }
-.mapzoom { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; }
-.mapzoom button {
-  width: 24px; height: 24px; border: 1px solid var(--line-3); background: var(--surface);
-  cursor: pointer; font-size: 12px; color: var(--ink-2); font-family: inherit; line-height: 1;
-  display: grid; place-items: center;
-}
-.mapzoom button + button { border-top: 0; }
-.mapzoom button:first-child { border-radius: var(--r) var(--r) 0 0; }
-.mapzoom button:last-child { border-radius: 0 0 var(--r) var(--r); }
-.mapzoom button:hover { background: var(--head); color: var(--ink); }
 .maphint { font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 
 .zone { border-bottom: 1px solid var(--line); }
