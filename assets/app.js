@@ -838,6 +838,9 @@ function regionVB(name) {
 }
 
 const FILL_BY_COUNT = ['#FFFFFF', '#C3D9DD', '#79ADB6', '#15616F'];
+const MAP_REF_W = 860;                   // マーカーの画面サイズを決める基準 viewBox 幅
+const MAP_MIN_W = 120;                   // 最大ズーム（経度0.3度 ≒ 27km幅）
+const mapMaxW = () => regionVB('全国').w * 1.2;
 
 function viewMap() {
   const m = ui.map;
@@ -853,23 +856,23 @@ function viewMap() {
   const sel = m.sel ? summary.find((x) => x.f.id === m.sel) : null;
   const totalItems = summary.reduce((a, x) => a + x.items.length, 0);
 
+  const k0 = vb.w / MAP_REF_W;           // マーカーを画面上で一定サイズに保つための倍率
   const markers = summary.map((x) => {
     const [cx, cy] = project(x.f.lng, x.f.lat);
     const n = Math.min(3, x.items.length);
     const hit = m.cats.length && x.cats.some((c) => m.cats.includes(c));
     const dimmed = m.cats.length && !shownIds.has(x.f.id);
-    const half = 9 * u;
     const isSel = m.sel === x.f.id;
-    return `<g class="mk ${dimmed ? 'off' : ''}" data-mapfid="${x.f.id}" transform="translate(${cx},${cy})">
-      ${isSel ? `<rect x="${-half - 5 * u}" y="${-half - 5 * u}" width="${(half + 5 * u) * 2}" height="${(half + 5 * u) * 2}"
-        fill="none" stroke="#15616F" stroke-width="${2 * u}"/>` : ''}
-      <rect x="${-half}" y="${-half}" width="${half * 2}" height="${half * 2}"
-        fill="${FILL_BY_COUNT[n]}" stroke="${hit ? '#A93A2C' : '#1A2227'}" stroke-width="${(hit ? 2.4 : 1.2) * u}"/>
-      <text x="0" y="${4 * u}" text-anchor="middle" font-size="${11 * u}"
+    return `<g class="mk ${dimmed ? 'off' : ''}" data-mapfid="${x.f.id}" data-scale data-cx="${cx}" data-cy="${cy}"
+      transform="translate(${cx},${cy}) scale(${k0})">
+      ${isSel ? '<rect x="-14" y="-14" width="28" height="28" fill="none" stroke="#15616F" stroke-width="2"/>' : ''}
+      <rect x="-9" y="-9" width="18" height="18"
+        fill="${FILL_BY_COUNT[n]}" stroke="${hit ? '#A93A2C' : '#1A2227'}" stroke-width="${hit ? 2.4 : 1.2}"/>
+      <text x="0" y="4" text-anchor="middle" font-size="11"
         font-family="ui-monospace,monospace" font-weight="700"
         fill="${n >= 2 ? '#fff' : '#1A2227'}">${x.items.length}</text>
-      ${vb.w < 3000 ? `<text x="0" y="${half + 14 * u}" text-anchor="middle" font-size="${11 * u}"
-        fill="#1A2227" style="paint-order:stroke" stroke="#fff" stroke-width="${3 * u}">${esc(x.f.name)}</text>` : ''}
+      <text class="mk-label" x="0" y="23" text-anchor="middle" font-size="11"
+        fill="#1A2227" style="paint-order:stroke" stroke="#fff" stroke-width="3">${esc(x.f.name)}</text>
     </g>`;
   }).join('');
 
@@ -897,15 +900,24 @@ function viewMap() {
         <div class="panel-hd">全国の設置状況
           <span class="count">${m.date} 時点 / ${summary.filter((x) => x.items.length).length}施設に ${totalItems}件</span></div>
         <div class="panel-bd" style="padding:0;position:relative">
-          <svg class="mapsvg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" role="img" aria-label="提携施設の設置状況マップ">
-            <rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="#E7EDF0"/>
-            <g>${PREFS.map((p) => `<path d="${p.d}" fill="#F7F9FA" stroke="#BFC7CC" stroke-width="${1.2 * u}"/>`).join('')}</g>
+          <svg class="mapsvg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" tabindex="0"
+            role="img" aria-label="提携施設の設置状況マップ。ピンチまたはホイールで拡大縮小、ドラッグで移動できます。">
+            <rect class="map-bg" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="#E7EDF0"/>
+            <g>${PREFS.map((p) => `<path d="${p.d}" fill="#F7F9FA" stroke="#BFC7CC" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join('')}</g>
             <rect x="${OKIBOX.x}" y="${OKIBOX.y}" width="${OKIBOX.w}" height="${OKIBOX.h}"
-              fill="none" stroke="#9BA5AB" stroke-width="${1.2 * u}" stroke-dasharray="${5 * u},${4 * u}"/>
-            <text x="${OKIBOX.x + OKIBOX.w / 2}" y="${OKIBOX.y - 6 * u}" text-anchor="middle"
-              font-size="${10 * u}" fill="#838E95">沖縄県（位置は模式）</text>
+              fill="none" stroke="#9BA5AB" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="4 3"/>
+            <g data-scale data-cx="${OKIBOX.x + OKIBOX.w / 2}" data-cy="${OKIBOX.y - 6}"
+               transform="translate(${OKIBOX.x + OKIBOX.w / 2},${OKIBOX.y - 6}) scale(${k0})">
+              <text text-anchor="middle" font-size="10" fill="#838E95">沖縄県（位置は模式）</text>
+            </g>
             <g>${markers}</g>
           </svg>
+          <div class="mapzoom">
+            <button id="mz-in" title="拡大（＋キー）" aria-label="拡大">＋</button>
+            <button id="mz-out" title="縮小（−キー）" aria-label="縮小">−</button>
+            <button id="mz-fit" title="表示範囲に戻す（0キー）" aria-label="表示範囲に戻す">⟲</button>
+          </div>
+          <div class="maphint">ピンチ / ホイールで拡大縮小・ドラッグで移動</div>
           <div class="maplegend">
             <span class="legend">
               <span>設置件数</span>
@@ -1002,6 +1014,152 @@ function facilityZonePanel(x, date) {
   </div>`;
 }
 
+
+/* ---------- 地図のピンチ・ホイール・ドラッグ操作 ---------- */
+function attachMapZoom() {
+  const svg = $('.mapsvg');
+  if (!svg) return;
+  let vb = { ...ui.map.vb };
+  const scaled = $$('[data-scale]', svg);
+  const bg = $('.map-bg', svg);
+
+  const apply = () => {
+    svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+    const k = vb.w / MAP_REF_W;
+    for (const g of scaled) {
+      g.setAttribute('transform', `translate(${g.dataset.cx},${g.dataset.cy}) scale(${k})`);
+    }
+    if (bg) {
+      bg.setAttribute('x', vb.x); bg.setAttribute('y', vb.y);
+      bg.setAttribute('width', vb.w); bg.setAttribute('height', vb.h);
+    }
+    const showLabels = vb.w < 3200;
+    $$('.mk-label', svg).forEach((t) => { t.style.display = showLabels ? '' : 'none'; });
+    ui.map.vb = { ...vb };
+  };
+
+  // 全体像から離れすぎないように寄せる
+  const clamp = () => {
+    const full = regionVB('全国');
+    const maxW = mapMaxW();
+    if (vb.w > maxW) { const f = maxW / vb.w; vb.w *= f; vb.h *= f; }
+    const cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2;
+    const minX = full.x, maxX = full.x + full.w;
+    const minY = full.y, maxY = full.y + full.h;
+    if (cx < minX) vb.x += minX - cx;
+    if (cx > maxX) vb.x += maxX - cx;
+    if (cy < minY) vb.y += minY - cy;
+    if (cy > maxY) vb.y += maxY - cy;
+  };
+
+  const toSvg = (clientX, clientY) => {
+    const r = svg.getBoundingClientRect();
+    return [vb.x + ((clientX - r.left) / r.width) * vb.w,
+            vb.y + ((clientY - r.top) / r.height) * vb.h];
+  };
+  const perPx = () => vb.w / (svg.getBoundingClientRect().width || 1);
+
+  const markCustom = () => {
+    ui.map.region = null;
+    $$('[data-mapregion]').forEach((b) => b.classList.remove('on'));
+  };
+
+  const zoomAt = (clientX, clientY, factor) => {
+    const target = Math.min(mapMaxW(), Math.max(MAP_MIN_W, vb.w * factor));
+    const f = target / vb.w;
+    if (f === 1) return;
+    const [px, py] = toSvg(clientX, clientY);
+    vb = { x: px - (px - vb.x) * f, y: py - (py - vb.y) * f, w: vb.w * f, h: vb.h * f };
+    clamp(); apply(); markCustom();
+  };
+
+  // --- ホイール / トラックパッドのピンチ ---
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    // ctrlKey が立つのはトラックパッドのピンチ。感度を上げる
+    const f = Math.exp(e.deltaY * (e.ctrlKey ? 0.012 : 0.0022));
+    zoomAt(e.clientX, e.clientY, f);
+  }, { passive: false });
+
+  // --- ポインタ（1本=移動 / 2本=ピンチ） ---
+  const pts = new Map();
+  let pinch = null, moved = 0;
+
+  svg.addEventListener('pointerdown', (e) => {
+    svg.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved = 0;
+    svg.dataset.drag = '0';
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+    }
+  });
+
+  svg.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId);
+    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved += Math.abs(dx) + Math.abs(dy);
+    if (moved > 5) svg.dataset.drag = '1';
+
+    if (pts.size >= 2) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      if (pinch && d > 0) {
+        // 指の間隔が広がる = 拡大 = viewBox を狭める
+        zoomAt(cx, cy, pinch.d / d);
+        // 2本指の移動ぶんパンする
+        const k = perPx();
+        vb.x -= (cx - pinch.cx) * k; vb.y -= (cy - pinch.cy) * k;
+        clamp(); apply();
+      }
+      pinch = { d, cx, cy };
+      return;
+    }
+    // 1本指 / マウスドラッグ = パン
+    const k = perPx();
+    vb.x -= dx * k; vb.y -= dy * k;
+    clamp(); apply();
+  });
+
+  const release = (e) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 0) setTimeout(() => { svg.dataset.drag = '0'; }, 0);
+  };
+  svg.addEventListener('pointerup', release);
+  svg.addEventListener('pointercancel', release);
+  svg.addEventListener('pointerleave', release);
+
+  // --- ボタン / キーボード ---
+  const centerZoom = (f) => {
+    const r = svg.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, f);
+  };
+  $('#mz-in').addEventListener('click', () => centerZoom(1 / 1.5));
+  $('#mz-out').addEventListener('click', () => centerZoom(1.5));
+  $('#mz-fit').addEventListener('click', () => {
+    ui.map.region = ui.map.region || '全国';
+    ui.map.vb = regionVB(ui.map.region);
+    render();
+  });
+  svg.addEventListener('keydown', (e) => {
+    const step = vb.w * 0.15;
+    if (e.key === '+' || e.key === '=') { centerZoom(1 / 1.5); e.preventDefault(); }
+    else if (e.key === '-' || e.key === '_') { centerZoom(1.5); e.preventDefault(); }
+    else if (e.key === '0') { ui.map.vb = regionVB(ui.map.region || '全国'); render(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { vb.x -= step; clamp(); apply(); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { vb.x += step; clamp(); apply(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { vb.y -= step; clamp(); apply(); e.preventDefault(); }
+    else if (e.key === 'ArrowDown') { vb.y += step; clamp(); apply(); e.preventDefault(); }
+  });
+
+  apply();
+}
+
 /* ================= ルーター ================= */
 function render() {
   sweepHolds();
@@ -1094,8 +1252,11 @@ function bind() {
   }));
   const mpClear = $('#mp-clear');
   if (mpClear) mpClear.addEventListener('click', () => { ui.map.cats = []; render(); });
+  attachMapZoom();
   $$('[data-mapfid]').forEach((el) => el.addEventListener('click', (e) => {
     e.stopPropagation();
+    // 地図をドラッグしただけのときは選択しない
+    if (el.ownerSVGElement && el.ownerSVGElement.dataset.drag === '1') return;
     const id = el.dataset.mapfid;
     ui.map.sel = ui.map.sel === id ? null : id;
     render();
