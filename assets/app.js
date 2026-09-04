@@ -4,6 +4,25 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+/* ---------- 表の並び替え ---------- */
+function sortTh(table, col, label, cls = '') {
+  const cur = ui.sort[table];
+  const on = cur && cur.col === col;
+  return `<th class="${cls} sortable${on ? ' on' : ''}" data-sort="${table}:${col}"
+    role="button" tabindex="0" aria-sort="${on ? (cur.dir === 1 ? 'ascending' : 'descending') : 'none'}"
+    >${label}<span class="sarrow">${on ? (cur.dir === 1 ? '\u25B2' : '\u25BC') : '\u21C5'}</span></th>`;
+}
+function applySort(table, rows, accessors) {
+  const cur = ui.sort[table];
+  if (!cur || !accessors[cur.col]) return rows;
+  const get = accessors[cur.col];
+  return [...rows].sort((a, b) => {
+    const va = get(a), vb = get(b);
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * cur.dir;
+    return String(va == null ? '' : va).localeCompare(String(vb == null ? '' : vb), 'ja') * cur.dir;
+  });
+}
+
 const REGIONS = {
   すべて: null,
   北海道: ['01'],
@@ -25,8 +44,11 @@ const ui = {
     budget: 300000, tags: [], category: 'スキンケア', fixture: false,
   },
   calMonth: null, sel: { start: null, end: null },
-  facSlot: null, facMonth: null, facCalSlot: null, checkoutStep: 1,
+  facSlot: null, facMonth: null, facCalSlot: null, checkoutStep: 1, checkoutId: null,
   map: { date: null, cats: [], sel: null, region: '全国', base: 'gsi_pale', view: null, fitTo: null },
+  sort: {},
+  onlyAvailable: false,
+  bkFilter: { status: '', q: '' },
 };
 
 function toast(msg) {
@@ -240,8 +262,15 @@ function viewSearch() {
       rows.push({ f, ...m });
     }
   }
-  rows.sort((a, b) => (a.chk.ok ? 0 : 1) - (b.chk.ok ? 0 : 1) || a.quote.net - b.quote.net);
   const okCount = rows.filter((r) => r.chk.ok).length;
+  const totalAll = rows.length;
+  if (ui.onlyAvailable) rows = rows.filter((r) => r.chk.ok);
+  rows = applySort('search', rows, {
+    name: (r) => r.f.name, slot: (r) => r.slot.name, cons: (r) => r.f.avgConsumption,
+    avail: (r) => D.dayInfo(r.slot.id, q.start).available, price: (r) => r.quote.net,
+  });
+  if (ui.sort.search) rows.sort((a, b) => (a.chk.ok ? 0 : 1) - (b.chk.ok ? 0 : 1));
+  else rows.sort((a, b) => (a.chk.ok ? 0 : 1) - (b.chk.ok ? 0 : 1) || a.quote.net - b.quote.net);
   const LIMIT = 120;
   const total = rows.length;
   rows = rows.slice(0, LIMIT);
@@ -281,14 +310,17 @@ function viewSearch() {
       <div class="panel">
         <div class="panel-hd">
           検索結果
-          <span class="count">${total}枠中 <b style="color:var(--ok)">${okCount}枠</b>が予約可能${total > LIMIT ? ` / 上位${LIMIT}件を表示` : ''}</span>
+          <label class="check" style="margin-left:8px;font-weight:400">
+            <input type="checkbox" id="only-avail" ${ui.onlyAvailable ? 'checked' : ''}>予約できる枠だけ表示</label>
+          <span class="count">全${totalAll}枠中 <b style="color:var(--ok)">${okCount}枠</b>が予約可能${
+            ui.onlyAvailable ? ' / 予約できない枠は非表示' : ''}${total > LIMIT ? ` / 上位${LIMIT}件を表示` : ''}</span>
         </div>
         <div class="panel-bd flush">
           ${rows.length ? `<div class="tablewrap"><table class="t rows">
             <thead><tr>
-              <th>施設</th><th>枠商品</th><th>客層</th>
-              <th class="n">消化</th><th class="n">残</th><th>今後13週の空き</th>
-              <th class="n">金額(税抜)</th><th class="w-act"></th>
+              ${sortTh('search', 'name', '施設')}${sortTh('search', 'slot', '枠商品')}<th>客層</th>
+              ${sortTh('search', 'cons', '消化', 'n')}${sortTh('search', 'avail', '残', 'n')}
+              <th>今後13週の空き</th>${sortTh('search', 'price', '金額(税抜)', 'n')}<th class="w-act"></th>
             </tr></thead>
             <tbody>
             ${rows.map((r) => {
@@ -525,6 +557,8 @@ function viewCheckout(id) {
   if (b.status !== 'hold') return viewDone(id);
   const slot = D.slotById(b.slotId);
   const f = slot.facility;
+  // 離脱して戻ってきても、入力途中のステップから再開する
+  if (ui.checkoutId !== id) { ui.checkoutId = id; ui.checkoutStep = b.step || 1; }
   const step = ui.checkoutStep || 1;
 
   return `
@@ -560,12 +594,19 @@ function viewCheckout(id) {
       <div class="panel-hd">出稿情報</div>
       <div class="panel-bd">
         <div class="grid2">
-          <div><label class="f">商材名（必須）</label><input class="inp" id="ck-product" placeholder="うるおいクレンジングミルク" value="${esc(b.product || '')}"></div>
-          <div><label class="f">配布個数（必須）</label><input class="inp" type="number" id="ck-qty" placeholder="800" value="${b.sampleQty || ''}"></div>
-          <div><label class="f">発送予定日</label><input class="inp" type="date" id="ck-ship" value="${b.shipDate || D.ymd(D.addDays(D.parseYmd(b.deliveryDue), -3))}"></div>
-          <div><label class="f">現場担当者（必須）</label><input class="inp" id="ck-name" placeholder="田中 太郎" value="${esc(b.contact || '')}"></div>
+          <div><label class="f" for="ck-product">商材名（必須）</label>
+            <input class="inp" id="ck-product" placeholder="うるおいクレンジングミルク" value="${esc(b.product || '')}"
+              aria-describedby="err-ck-product"><span class="ferr" id="err-ck-product"></span></div>
+          <div><label class="f" for="ck-qty">配布個数（必須）</label>
+            <input class="inp" type="number" id="ck-qty" min="1" placeholder="800" value="${b.sampleQty || ''}"
+              aria-describedby="err-ck-qty"><span class="ferr" id="err-ck-qty"></span></div>
+          <div><label class="f" for="ck-ship">発送予定日</label>
+            <input class="inp" type="date" id="ck-ship" value="${b.shipDate || D.ymd(D.addDays(D.parseYmd(b.deliveryDue), -3))}"></div>
+          <div><label class="f" for="ck-name">現場担当者（必須）</label>
+            <input class="inp" id="ck-name" placeholder="田中 太郎" value="${esc(b.contact || '')}"
+              aria-describedby="err-ck-name"><span class="ferr" id="err-ck-name"></span></div>
         </div>
-        <div style="margin-top:8px"><label class="f">施設への申し送り</label>
+        <div style="margin-top:8px"><label class="f" for="ck-memo">施設への申し送り</label>
           <textarea class="inp" id="ck-memo" rows="2" placeholder="直射日光を避けて設置してください">${esc(b.memo || '')}</textarea></div>
         <div class="note note-info" style="margin-top:9px">
           <span class="lb">参考</span>この施設の消化スピードは ${f.avgConsumption}個/日。${b.total.days}日で約 ${f.avgConsumption * b.total.days}個 が目安です。</div>
@@ -637,14 +678,19 @@ function viewDone(id) {
 
 /* ================= 予約管理 ================= */
 function viewBookings() {
-  const list = [...D.state.bookings].reverse();
+  let list = applySort('bk', [...D.state.bookings].reverse(), {
+    no: (b) => b.no, fac: (b) => D.slotById(b.slotId).facility.name,
+    start: (b) => b.start, net: (b) => b.total.net, status: (b) => b.status,
+  });
   return `
   <div class="wrap">
     <div class="page-head"><h1>予約管理</h1><span class="sub">${list.length}件</span></div>
     <div class="panel"><div class="panel-bd flush">
       ${list.length ? `<div class="tablewrap"><table class="t">
-        <thead><tr><th>予約番号</th><th>施設 / 枠</th><th>期間</th><th class="n">数量</th><th>商材</th>
-          <th class="n">金額(税抜)</th><th>着荷</th><th>状態</th><th class="w-act"></th></tr></thead>
+        <thead><tr>${sortTh('bk', 'no', '予約番号')}${sortTh('bk', 'fac', '施設 / 枠')}
+          ${sortTh('bk', 'start', '期間')}<th class="n">数量</th><th>商材</th>
+          ${sortTh('bk', 'net', '金額(税抜)', 'n')}<th>着荷</th>${sortTh('bk', 'status', '状態')}
+          <th class="w-act"></th></tr></thead>
         <tbody>${list.map((b) => {
           const s = D.slotById(b.slotId); const [l, c] = STATUS[b.status];
           const rp = b.status === 'confirmed' ? D.refundPreview(b) : null;
@@ -788,6 +834,17 @@ function viewAdmin() {
   const holds = bs.filter((b) => b.status === 'hold');
   const unship = confirmed.filter((b) => !b.shipment);
   const noVerify = D.FACILITIES.filter((f) => !f.verified);
+  const kw = ui.bkFilter.q.trim().toLowerCase();
+  let filtered = [...bs].reverse().filter((b) => {
+    if (ui.bkFilter.status && b.status !== ui.bkFilter.status) return false;
+    if (!kw) return true;
+    const sl = D.slotById(b.slotId);
+    return [b.no, sl.facility.name, sl.name, b.category, b.product || ''].join(' ').toLowerCase().includes(kw);
+  });
+  filtered = applySort('ops', filtered, {
+    no: (b) => b.no, fac: (b) => D.slotById(b.slotId).facility.name,
+    start: (b) => b.start, net: (b) => b.total.net, status: (b) => b.status,
+  });
 
   return `
   <div class="wrap">
@@ -805,12 +862,22 @@ function viewAdmin() {
       ${unship.map((b) => `${esc(D.slotById(b.slotId).facility.name)}（${b.deliveryDue}まで）`).join(' / ')}</div>` : ''}
 
     <div class="panel">
-      <div class="panel-hd">予約横断一覧<span class="count">${bs.length}件</span></div>
+      <div class="panel-hd">予約横断一覧<span class="count">${filtered.length} / ${bs.length}件</span></div>
+      <div class="toolbar">
+        <div><label class="f">状態</label>
+          <div class="chips">
+            <button class="chip ${!ui.bkFilter.status ? 'on' : ''}" data-bkstatus="">すべて</button>
+            ${Object.entries(STATUS).map(([k, v]) => `<button class="chip ${ui.bkFilter.status === k ? 'on' : ''}" data-bkstatus="${k}">${v[0]}</button>`).join('')}
+          </div></div>
+        <div style="width:230px"><label class="f" for="bk-q">検索（施設・予約番号・商材）</label>
+          <input class="inp" id="bk-q" value="${esc(ui.bkFilter.q)}" placeholder="例: 大江戸 / BKG-2026"></div>
+      </div>
       <div class="panel-bd flush">
-        ${bs.length ? `<div class="tablewrap"><table class="t">
-          <thead><tr><th>予約番号</th><th>施設</th><th>枠</th><th>期間</th><th>商材</th>
-            <th class="n">金額(税抜)</th><th class="n">運営取分</th><th>状態</th></tr></thead>
-          <tbody>${[...bs].reverse().map((b) => {
+        ${filtered.length ? `<div class="tablewrap scrolly"><table class="t">
+          <thead><tr>${sortTh('ops', 'no', '予約番号')}${sortTh('ops', 'fac', '施設')}<th>枠</th>
+            ${sortTh('ops', 'start', '期間')}<th>商材</th>
+            ${sortTh('ops', 'net', '金額(税抜)', 'n')}<th class="n">運営取分</th>${sortTh('ops', 'status', '状態')}</tr></thead>
+          <tbody>${filtered.map((b) => {
             const s = D.slotById(b.slotId); const [l, c] = STATUS[b.status];
             return `<tr><td class="k">${b.no}</td><td>${esc(s.facility.name)}</td>
               <td class="tiny">${esc(s.name)}</td><td class="k">${b.start}〜${b.end}</td>
@@ -818,16 +885,20 @@ function viewAdmin() {
               <td class="n dim">${D.yen(b.total.net * 0.3)}</td>
               <td><span class="tag ${c}">${l}</span></td></tr>`;
           }).join('')}</tbody></table></div>`
-          : '<div class="empty"><h3>予約はありません</h3><p>広告主に切り替えて申し込むとここに出ます。</p></div>'}
+          : `<div class="empty"><h3>${bs.length ? '条件に合う予約がありません' : '予約はありません'}</h3>
+             <p>${bs.length ? '状態や検索語を変えてください。' : '広告主に切り替えて申し込むとここに出ます。'}</p></div>`}
       </div>
     </div>
 
     <div class="panel" style="margin-top:10px">
       <div class="panel-hd">提携施設マスタ<span class="count">${D.FACILITIES.length}施設 / ${D.ALL_SLOTS.length}枠</span></div>
       <div class="panel-bd flush"><div class="tablewrap scrolly"><table class="t rows">
-        <thead><tr><th>施設</th><th>エリア</th><th class="n">枠数</th><th class="n">月間来場</th>
-          <th class="n">消化</th><th class="n">実施</th><th>客層データ</th><th>直近13週の空き</th></tr></thead>
-        <tbody>${D.FACILITIES.map((f) => `<tr data-fid="${f.id}">
+        <thead><tr>${sortTh('fac', 'name', '施設')}${sortTh('fac', 'pref', 'エリア')}
+          <th class="n">枠数</th>${sortTh('fac', 'visitors', '月間来場', 'n')}
+          ${sortTh('fac', 'cons', '消化', 'n')}${sortTh('fac', 'camp', '実施', 'n')}
+          <th>客層データ</th><th>直近13週の空き</th></tr></thead>
+        <tbody>${applySort('fac', D.FACILITIES, { name: (f) => f.name, pref: (f) => f.prefName,
+          visitors: (f) => f.monthlyVisitors, cons: (f) => f.avgConsumption, camp: (f) => f.campaignCount }).map((f) => `<tr data-fid="${f.id}">
           <td><b>${esc(f.name)}</b><br><span class="tiny dim k">${f.id.toUpperCase()}</span></td>
           <td class="tiny">${f.prefName}</td><td class="n">${f.slots.length}</td>
           <td class="n">${f.monthlyVisitors.toLocaleString()}</td><td class="n">${f.avgConsumption}</td>
@@ -965,8 +1036,8 @@ function viewMap() {
         <div class="panel" style="margin-top:8px">
           <div class="panel-hd">施設一覧<span class="count">${shown.length}件</span></div>
           <div class="panel-bd flush"><div class="tablewrap scrolly"><table class="t rows">
-            <thead><tr><th>施設</th><th class="n">設置</th><th class="n">空き枠</th></tr></thead>
-            <tbody>${shown.map((x) => `<tr data-mapfid="${x.f.id}" ${m.sel === x.f.id ? 'style="background:var(--blue-row)"' : ''}>
+            <thead><tr>${sortTh('mapfac', 'name', '施設')}${sortTh('mapfac', 'items', '設置', 'n')}${sortTh('mapfac', 'open', '空き枠', 'n')}</tr></thead>
+            <tbody>${applySort('mapfac', shown, { name: (x) => x.f.name, items: (x) => x.items.length, open: (x) => x.openSlots }).map((x) => `<tr data-mapfid="${x.f.id}" ${m.sel === x.f.id ? 'style="background:var(--blue-row)"' : ''}>
               <td><b>${esc(x.f.name)}</b><br><span class="tiny dim">${x.f.prefName}${x.f.city}</span></td>
               <td class="n">${x.items.length}</td>
               <td class="n">${x.openSlots}/${x.f.slots.length}</td></tr>`).join('')}</tbody>
@@ -1147,7 +1218,7 @@ function applyPendingFit() {
   if (!mapObj || !ui.map.fitTo) return;
   const b = regionBounds(ui.map.fitTo);
   try {
-    if (mapObj.kind === 'leaflet') mapObj.map.fitBounds(b, { padding: [28, 28] });
+    if (mapObj.kind === 'leaflet') mapObj.map.fitBounds(b, { padding: [28, 28], animate: false });
     else {
       const g = window.google;
       mapObj.map.fitBounds(new g.maps.LatLngBounds({ lat: b[0][0], lng: b[0][1] }, { lat: b[1][0], lng: b[1][1] }), 40);
@@ -1166,12 +1237,12 @@ async function createLeafletMap(baseKey) {
   }).addTo(map);
   const v = ui.map.view;
   if (v) map.setView(v.center, v.zoom);
-  else map.fitBounds(regionBounds(ui.map.region || '全国'), { padding: [28, 28] });
+  else map.fitBounds(regionBounds(ui.map.region || '全国'), { padding: [28, 28], animate: false });
   map.on('moveend zoomend', () => {
     const c = map.getCenter();
     ui.map.view = { center: [c.lat, c.lng], zoom: map.getZoom() };
   });
-  map.on('zoomend', syncLabels);
+  map.on('zoomend', scheduleMarkerRefresh);
   mapObj = { kind: 'leaflet', base: baseKey, map, markerLayer: L.layerGroup().addTo(map), markers: [] };
 }
 
@@ -1189,6 +1260,14 @@ async function createGoogleMap() {
   });
   mapObj = { kind: 'google', base: 'google', map, markers: [] };
   if (!v) ui.map.fitTo = ui.map.region || '全国';
+}
+
+let markerTimer = null;
+/** ズーム直後にマーカーを組み直す。アニメーションの最中に走らせると
+ *  Leaflet の視点変更が中断されるため、1フレーム遅らせる。 */
+function scheduleMarkerRefresh() {
+  clearTimeout(markerTimer);
+  markerTimer = setTimeout(() => refreshMarkers(), 60);
 }
 
 function markerHTML(x, m) {
@@ -1219,15 +1298,51 @@ function refreshMarkers() {
 
   if (mapObj.kind === 'leaflet') {
     const L = window.L;
+    const map = mapObj.map;
     mapObj.markerLayer.clearLayers();
     mapObj.markers = [];
-    for (const x of summary) {
-      const mk = L.marker([x.f.lat, x.f.lng], {
-        icon: L.divIcon({ className: 'mkw', html: markerHTML(x, m), iconSize: [22, 22], iconAnchor: [11, 11] }),
+
+    // 近すぎるマーカーはまとめる（重なって数字が読めなくなるのを防ぐ）
+    const pts = summary.map((x) => ({ x, p: map.latLngToLayerPoint([x.f.lat, x.f.lng]) }));
+    const used = new Array(pts.length).fill(false);
+    const groups = [];
+    for (let i = 0; i < pts.length; i++) {
+      if (used[i]) continue;
+      const g = [pts[i]]; used[i] = true;
+      for (let j = i + 1; j < pts.length; j++) {
+        if (!used[j] && pts[i].p.distanceTo(pts[j].p) < 34) { g.push(pts[j]); used[j] = true; }
+      }
+      groups.push(g);
+    }
+
+    for (const g of groups) {
+      if (g.length === 1) {
+        const x = g[0].x;
+        const mk = L.marker([x.f.lat, x.f.lng], {
+          icon: L.divIcon({ className: 'mkw', html: markerHTML(x, m), iconSize: [22, 22], iconAnchor: [11, 11] }),
+        });
+        mk.on('click', () => { ui.map.sel = ui.map.sel === x.f.id ? null : x.f.id; render(); });
+        mapObj.markerLayer.addLayer(mk);
+        mapObj.markers.push({ mk, x });
+        continue;
+      }
+      const items = g.reduce((a, o) => a + o.x.items.length, 0);
+      const hit = m.cats.length && g.some((o) => o.x.cats.some((c) => m.cats.includes(c)));
+      const lat = g.reduce((a, o) => a + o.x.f.lat, 0) / g.length;
+      const lng = g.reduce((a, o) => a + o.x.f.lng, 0) / g.length;
+      const cl = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: 'mkw',
+          html: `<span class="mkcluster${hit ? ' hit' : ''}"><b>${g.length}</b><i>${items}</i></span>`,
+          iconSize: [34, 34], iconAnchor: [17, 17],
+        }),
       });
-      mk.on('click', () => { ui.map.sel = ui.map.sel === x.f.id ? null : x.f.id; render(); });
-      mapObj.markerLayer.addLayer(mk);
-      mapObj.markers.push({ mk, x });
+      cl.bindTooltip(`${g.length}施設 / 設置 ${items}件<br>クリックで拡大`, { direction: 'top' });
+      cl.on('click', () => {
+        map.fitBounds(L.latLngBounds(g.map((o) => [o.x.f.lat, o.x.f.lng])).pad(0.35),
+          { maxZoom: 15, animate: false });
+      });
+      mapObj.markerLayer.addLayer(cl);
     }
     syncLabels();
     return;
@@ -1255,8 +1370,26 @@ function refreshMarkers() {
 }
 
 /* ================= ルーター ================= */
+/** 再描画をまたいでフォーカスを戻すためのキー */
+function focusKey(el) {
+  if (!el || el === document.body) return null;
+  if (el.id) return '#' + CSS.escape(el.id);
+  for (const a of ['data-region', 'data-type', 'data-tag', 'data-mapcat', 'data-mapregion', 'data-slot', 'data-fslot']) {
+    if (el.hasAttribute(a)) return `[${a}="${CSS.escape(el.getAttribute(a))}"]`;
+  }
+  return null;
+}
+
+let lastHash = null;
 function render() {
   sweepHolds();
+  // 画面遷移なら先頭へ、同じ画面の更新ならスクロール位置とフォーカスを保つ
+  const isNav = location.hash !== lastHash;
+  const keepY = window.scrollY;
+  const af = document.activeElement;
+  const fk = isNav ? null : focusKey(af);
+  const selStart = af && 'selectionStart' in af ? af.selectionStart : null;
+  const selEnd = af && 'selectionEnd' in af ? af.selectionEnd : null;
   const hash = location.hash || '#/';
   const path = hash.split('/').slice(1).filter(Boolean);
   let body, ctx = '', title = '';
@@ -1276,12 +1409,47 @@ function render() {
   detachMap();   // 地図の DOM を退避してから差し替える（インスタンスは維持）
   $('#app').innerHTML = `<div class="app">${sidebar()}<div class="main">${topbar(title, ctx)}
     <div class="content">${body}</div>${statusbar()}</div></div>`;
-  window.scrollTo(0, 0);
   bind();
+  if (isNav) window.scrollTo(0, 0);
+  else {
+    window.scrollTo(0, keepY);
+    if (fk) {
+      const el = document.querySelector(fk);
+      if (el) {
+        el.focus({ preventScroll: true });
+        if (selStart != null && 'setSelectionRange' in el) {
+          try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* date等は不可 */ }
+        }
+      }
+    }
+  }
+  lastHash = location.hash;
 }
 
 /* ================= イベント ================= */
 function bind() {
+  // 表の並び替え（クリック / Enter・Space。3回目で解除）
+  const doSort = (spec) => {
+    const [table, col] = spec.split(':');
+    const cur = ui.sort[table];
+    if (cur && cur.col === col) { if (cur.dir === 1) ui.sort[table] = { col, dir: -1 }; else delete ui.sort[table]; }
+    else ui.sort[table] = { col, dir: 1 };
+    render();
+  };
+  $$('[data-sort]').forEach((th) => {
+    th.addEventListener('click', () => doSort(th.dataset.sort));
+    th.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doSort(th.dataset.sort); }
+    });
+  });
+  const oa = $('#only-avail');
+  if (oa) oa.addEventListener('change', () => { ui.onlyAvailable = oa.checked; render(); });
+  $$('[data-bkstatus]').forEach((b) => b.addEventListener('click', () => {
+    ui.bkFilter.status = b.dataset.bkstatus; render();
+  }));
+  const bq = $('#bk-q');
+  if (bq) bq.addEventListener('input', () => { ui.bkFilter.q = bq.value; render(); });
+
   const roleSel = $('#role-sel');
   if (roleSel) roleSel.addEventListener('change', () => {
     const r = roleSel.value;
@@ -1367,8 +1535,16 @@ function bind() {
     render();
   }));
 
-  // 施設行クリック（検索結果 / ホーム / 運営マスタ）
-  $$('tr[data-fid]').forEach((tr) => tr.addEventListener('click', () => {
+  // 施設行クリック（検索結果 / ホーム / 運営マスタ）— キーボードでも操作できるようにする
+  const activate = (el, fn) => {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.addEventListener('click', fn);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
+    });
+  };
+  $$('tr[data-fid]').forEach((tr) => activate(tr, () => {
     ui.sel = { start: null, end: null }; ui.calMonth = null;
     ui.facSlot = tr.dataset.slot || null;
     go('#/facility/' + tr.dataset.fid);
@@ -1442,22 +1618,58 @@ function bind() {
   // 申込
   const cd = $('#cd');
   if (cd) startCountdown(cd);
+  // 申込フォーム：入力のたびに保存する（離脱しても消えない）
+  const ckId = location.hash.startsWith('#/checkout') ? location.hash.split('/')[2] : null;
+  const ckBooking = ckId ? D.state.bookings.find((x) => x.id === ckId) : null;
+  if (ckBooking) {
+    const map = { 'ck-product': 'product', 'ck-qty': 'sampleQty', 'ck-name': 'contact', 'ck-ship': 'shipDate', 'ck-memo': 'memo' };
+    for (const [elId, key] of Object.entries(map)) {
+      const el = $('#' + elId);
+      if (!el) continue;
+      el.addEventListener('input', () => {
+        ckBooking[key] = key === 'sampleQty' ? (+el.value || null) : el.value.trim();
+        ckBooking.step = ui.checkoutStep;
+        D.save();
+        const err = $('#err-' + elId);
+        if (err && el.value.trim()) { err.textContent = ''; el.removeAttribute('aria-invalid'); }
+      });
+    }
+  }
+  const setErr = (elId, msg) => {
+    const el = $('#' + elId), err = $('#err-' + elId);
+    if (err) err.textContent = msg;
+    if (el) { if (msg) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid'); }
+    return !msg;
+  };
   const next = $('#ck-next');
   if (next) next.addEventListener('click', () => {
-    const id = location.hash.split('/')[2];
-    const b = D.state.bookings.find((x) => x.id === id);
+    const b = ckBooking;
     if (ui.checkoutStep === 2) {
-      const p = $('#ck-product').value.trim(), q = +$('#ck-qty').value, n = $('#ck-name').value.trim();
-      if (!p || !q || !n) { toast('必須項目を入力してください'); return; }
-      b.product = p; b.sampleQty = q; b.contact = n;
+      const ok = [
+        setErr('ck-product', $('#ck-product').value.trim() ? '' : '商材名を入力してください'),
+        setErr('ck-qty', +$('#ck-qty').value > 0 ? '' : '配布個数を入力してください'),
+        setErr('ck-name', $('#ck-name').value.trim() ? '' : '担当者名を入力してください'),
+      ].every(Boolean);
+      if (!ok) {
+        const first = $('.inp[aria-invalid]');
+        if (first) first.focus();
+        toast('入力されていない項目があります');
+        return;
+      }
+      b.product = $('#ck-product').value.trim(); b.sampleQty = +$('#ck-qty').value;
+      b.contact = $('#ck-name').value.trim();
       b.shipDate = $('#ck-ship').value; b.memo = $('#ck-memo').value.trim();
-      D.save();
     }
     ui.checkoutStep = Math.min(3, (ui.checkoutStep || 1) + 1);
+    if (b) { b.step = ui.checkoutStep; D.save(); }
     render();
   });
   const back = $('#ck-back');
-  if (back) back.addEventListener('click', () => { ui.checkoutStep = Math.max(1, (ui.checkoutStep || 1) - 1); render(); });
+  if (back) back.addEventListener('click', () => {
+    ui.checkoutStep = Math.max(1, (ui.checkoutStep || 1) - 1);
+    if (ckBooking) { ckBooking.step = ui.checkoutStep; D.save(); }
+    render();
+  });
   const agree = $('#ck-agree');
   if (agree) agree.addEventListener('change', () => { $('#ck-pay').disabled = !agree.checked; });
   const pay = $('#ck-pay');
@@ -1574,20 +1786,39 @@ function bind() {
 }
 
 /* ---------- シート ---------- */
+let sheetOpener = null;
+function onSheetKey(e) {
+  const sheet = $('.sheet');
+  if (!sheet) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return; }
+  if (e.key !== 'Tab') return;
+  const f = sheet.querySelectorAll('a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
 function openSheet(html, after) {
   closeSheet();
+  sheetOpener = document.activeElement;
   const bg = document.createElement('div');
   bg.className = 'sheet-bg';
-  bg.innerHTML = `<div class="sheet">${html}</div>`;
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
   bg.addEventListener('click', (e) => { if (e.target === bg) closeSheet(); });
   document.body.appendChild(bg);
   document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', onSheetKey);
   if (after) after();
+  const focusTarget = bg.querySelector('input, select, textarea, button');
+  if (focusTarget) focusTarget.focus();
 }
 function closeSheet() {
   const s = $('.sheet-bg');
   if (s) s.remove();
   document.body.style.overflow = '';
+  document.removeEventListener('keydown', onSheetKey);
+  if (sheetOpener && document.contains(sheetOpener)) sheetOpener.focus();
+  sheetOpener = null;
 }
 
 /* ---------- 仮押さえカウントダウン ---------- */
@@ -1611,7 +1842,7 @@ function startCountdown(el) {
 
 /* ---------- 起動 ---------- */
 window.addEventListener('hashchange', () => {
-  if (!location.hash.startsWith('#/checkout')) ui.checkoutStep = 1;
+  if (!location.hash.startsWith('#/checkout')) { ui.checkoutStep = 1; ui.checkoutId = null; }
   render();
 });
 render();

@@ -453,3 +453,39 @@ table.kv th { width: 128px; background: var(--head); font-weight: 600; font-size
 }
 #toast.on { opacity: 1; }
 .skel { background: #E4E7EA; }
+
+/* ---- 入力エラー ---- */
+.ferr { display: block; font-size: 11px; color: var(--bad); margin-top: 2px; }
+.inp[aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad-bg); }
+
+/* ---- キーボード操作できる表の行 ---- */
+table.t tbody tr[role="button"]:focus-visible {
+  outline: 2px solid var(--blue); outline-offset: -2px; background: var(--blue-row);
+}
+
+/* ---- モバイル: サイドバーが縦に伸びて空白になるのを防ぐ ---- */
+@media (max-width: 860px) {
+  .app { display: block; min-height: 0; }
+  .side { position: static; height: auto; }
+  .cal-grid { grid-auto-rows: 46px; }
+  .content { padding: 10px 10px 16px; }
+}
+
+/* ---- 表の並び替え ---- */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { background: var(--head-2); }
+th.sortable:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+th.sortable.on { color: var(--blue); }
+.sarrow { margin-left: 3px; font-size: 9px; opacity: .45; }
+th.sortable.on .sarrow { opacity: 1; }
+
+/* ---- 地図のクラスタ ---- */
+.mkcluster {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(27,94,158,.92); border: 2px solid #fff; color: #fff;
+  font-family: var(--mono); line-height: 1; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
+.mkcluster.hit { background: rgba(163,50,39,.92); }
+.mkcluster b { font-size: 12px; font-weight: 700; }
+.mkcluster i { font-size: 9px; font-style: normal; opacity: .85; }
