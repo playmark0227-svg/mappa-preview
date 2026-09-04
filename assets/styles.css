@@ -397,8 +397,10 @@ table.kv th { width: 128px; background: var(--head); font-weight: 600; font-size
 /* ================= マップ ================= */
 .maplayout { display: grid; grid-template-columns: minmax(0,1fr) 316px; gap: 8px; align-items: start; }
 @media (max-width: 980px) { .maplayout { grid-template-columns: 1fr; } }
+.lmap-slot { width: 100%; }
 .lmap { width: 100%; height: 560px; background: #E8ECEF; }
 @media (max-width: 980px) { .lmap { height: 380px; } }
+.lmap .empty { padding: 60px 20px; }
 .lmap .leaflet-container { font-family: var(--sans); }
 .mkbox {
   width: 22px; height: 22px; display: grid; place-items: center; border-radius: var(--r);
