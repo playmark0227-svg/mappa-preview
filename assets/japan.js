@@ -3,6 +3,7 @@
 
 export const S = 400.0;
 export const mercY = (lat) => (Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360)) * 180 / Math.PI);
+export const OKI_OFFSET = { dx: 6.4, dy: 12.4 };  // 沖縄インセットのずらし量
 export const project = (lon, lat) => [Math.round(lon*S), Math.round(-mercY(lat)*S)];
 export const OKIBOX = { x: 53524, y: -17198, w: 454, h: 592 };
 export const BBOX = { x: 51359, y: -20516, w: 8199, h: 10295 };
