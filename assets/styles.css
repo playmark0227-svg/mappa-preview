@@ -511,7 +511,7 @@ th.sortable.on .sarrow { opacity: 1; }
 .guide-steps .tx b { font-size: 12.5px; }
 .guide-steps .d { display: block; font-size: 11px; color: var(--ink-2); line-height: 1.55; margin-top: 1px; }
 .guide-note { margin-top: 10px; }
-.guide-ft { display: flex; justify-content: flex-end; margin-top: 10px; }
+.guide-ft { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .guide-ft .btn { min-width: 120px; }
 @media (max-width: 620px) {
   .guide-roles { grid-template-columns: 1fr; }

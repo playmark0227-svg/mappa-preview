@@ -1478,13 +1478,7 @@ function bind() {
     go(r === 'adv' ? '#/' : r === 'fac' ? '#/f' : '#/admin');
   });
   const rs = $('#reset-demo');
-  if (rs) rs.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (confirm('このブラウザで行った予約・受入制限の変更を破棄して、デモ用の初期データに戻します。よろしいですか？')) {
-      D.resetAll(); ui.sort = {}; ui.bkFilter = { status: '', q: '' };
-      toast('デモデータに戻しました'); render();
-    }
-  });
+  if (rs) rs.addEventListener('click', (e) => { e.preventDefault(); resetDemo(); });
   const og = $('#open-guide');
   if (og) og.addEventListener('click', openGuide);
 
@@ -1812,13 +1806,20 @@ function bind() {
 
 /* ---------- デモガイド ---------- */
 const GUIDE_KEY = 'mappa.guide.v1';
+/** デモ用の初期データに戻す（確認つき）。スマホではサイドバー下部が隠れるので、ガイドからも呼べるようにする */
+function resetDemo() {
+  if (!confirm('このブラウザで行った予約・受入制限の変更を破棄して、デモ用の初期データに戻します。よろしいですか？')) return false;
+  D.resetAll(); ui.sort = {}; ui.bkFilter = { status: '', q: '' };
+  toast('デモデータに戻しました'); render();
+  return true;
+}
 const GUIDE_STEPS = [
   ['#/search', '広告主', '空き枠を探して申し込む',
     '期間と商材カテゴリを入れると、その期間に本当に空いている枠だけが出ます。施設を開いて日程を選び、申込から決済（テスト）まで進めます。'],
   ['#/map', '広告主・運営', '設置マップで全国を見渡す',
     '基準日を動かすと、その日にどの施設のどこへ何が置かれているかが変わります。拡大すると街区レベルまで見られます。'],
   ['#/f', '提携施設', '今日のタスクを片付ける',
-    '荷物の受け取りと実施報告をワンタップで。施設のスタッフがスマホで使う前提の画面です。'],
+    '荷物の受け取りはワンタップ、実施報告も配布数を入れて送るだけ。施設のスタッフがスマホで使う前提の画面です。'],
   ['#/f/calendar', '提携施設', '受け入れできない日を登録する',
     '日をタップして受入不可にすると、広告主側の空き状況にすぐ反映されます。予約が入っている日は変更できません。'],
   ['#/admin', '運営', 'ダッシュボードで全体を管理する',
@@ -1845,8 +1846,9 @@ function guideHTML() {
     </ol>
     <div class="note note-info guide-note"><span class="lb">デモについて</span>
       施設名・客層・実績の数値はすべて架空です。予約や設定はこのブラウザの中にだけ保存され、決済も発生しません。
-      左下の「デモデータに戻す」でいつでも最初の状態に戻せます。</div>
+      下の「デモデータに戻す」で、いつでも最初の状態に戻せます。</div>
     <div class="guide-ft">
+      <button class="btn btn-ghost" type="button" id="guide-reset">デモデータに戻す</button>
       <button class="btn" type="button" id="guide-close">はじめる</button>
     </div>
   </div>`;
@@ -1857,6 +1859,7 @@ function openGuide() {
     sh.classList.add('sheet-wide');
     sh.setAttribute('aria-labelledby', 'guide-title');
     $('#guide-close').addEventListener('click', closeSheet);
+    $('#guide-reset').addEventListener('click', () => { if (resetDemo()) closeSheet(); });
     $$('[data-guide-go]').forEach((b) => b.addEventListener('click', () => {
       const h = b.dataset.guideGo;
       closeSheet();
