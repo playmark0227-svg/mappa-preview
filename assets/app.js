@@ -180,7 +180,7 @@ function viewHome() {
   const bs = [...D.state.bookings].reverse();
   const confirmed = bs.filter((b) => b.status === 'confirmed');
   const holds = bs.filter((b) => b.status === 'hold');
-  const unship = confirmed.filter((b) => !b.shipment);
+  const unship = confirmed.filter((b) => !b.shipment).sort((a, b) => a.deliveryDue.localeCompare(b.deliveryDue));
   const dueSoon = unship.filter((b) => D.diffDays(D.TODAY, D.parseYmd(b.deliveryDue)) <= 7);
 
   return `
@@ -765,7 +765,7 @@ function viewFacHome() {
               <span class="tag ${i.own ? 'tag-accent' : ''}">${esc(i.cat)}</span>
               <span class="tiny">${esc(i.slotName)}</span>
               <span class="tiny dim">${i.own ? '自社受注' : esc(i.advertiser)}</span>
-              <span class="tiny dim mono" style="margin-left:auto">〜${i.until}</span></div>`).join('')}</div>
+              <span class="tiny dim mono" style="margin-left:auto;white-space:nowrap">〜${i.until}</span></div>`).join('')}</div>
           </div>`).join('') : '<div class="panel-bd"><p class="tiny dim" style="margin:0">なし</p></div>'}
         </div>
       </div>`;
@@ -841,7 +841,7 @@ function viewAdmin() {
   const confirmed = bs.filter((b) => b.status === 'confirmed');
   const gmv = confirmed.reduce((a, b) => a + b.total.net, 0);
   const holds = bs.filter((b) => b.status === 'hold');
-  const unship = confirmed.filter((b) => !b.shipment);
+  const unship = confirmed.filter((b) => !b.shipment).sort((a, b) => a.deliveryDue.localeCompare(b.deliveryDue));
   const noVerify = D.FACILITIES.filter((f) => !f.verified);
   const kw = ui.bkFilter.q.trim().toLowerCase();
   let filtered = [...bs].reverse().filter((b) => {
@@ -1109,7 +1109,7 @@ function facilityZonePanel(x, date) {
               ${its.length ? its.map((i) => `<div class="placed ${i.own ? 'own' : ''}">
                   <span class="tag ${i.own ? 'tag-accent' : ''}">${esc(i.cat)}</span>
                   <span class="tiny">${i.own ? esc(i.product || '自社出稿') : '他社'}</span>
-                  <span class="tiny dim mono" style="margin-left:auto">〜${i.until}</span>
+                  <span class="tiny dim mono" style="margin-left:auto;white-space:nowrap">〜${i.until}</span>
                 </div>`).join('')
                 : '<div class="tiny dim" style="padding:2px 0 0">設置なし</div>'}
             </div>`;
