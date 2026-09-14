@@ -377,6 +377,7 @@ function calendarHTML(slotId, monthDate, sel) {
       data-s="${i.status}" data-date="${ds}" ${i.selectable ? '' : 'disabled'}
       aria-label="${D.fmtDateLong(ds)} ${label}"><span class="d">${d}</span><span class="s">${label}</span></button>`);
   }
+  while (cells.length % 7) cells.push('<div class="cell empty"></div>');
   const prevOk = first > D.TODAY;
   const nextOk = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1) <= D.addDays(D.TODAY, D.HORIZON_DAYS);
   return `
@@ -792,6 +793,7 @@ function viewFacCalendar() {
     cells.push(`<button class="cell" data-s="${st}" data-fday="${ds}" ${info.past ? 'disabled' : ''}>
       <span class="d">${d}</span><span class="s">${label}</span></button>`);
   }
+  while (cells.length % 7) cells.push('<div class="cell empty"></div>');
   const ovs = D.state.overrides.filter((o) => D.slotById(o.slotId).facilityId === f.id);
 
   return `
