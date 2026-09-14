@@ -1185,6 +1185,17 @@ function destroyMap() {
   window.__mappaMap = null;
 }
 
+/** 地図の上端を整数ピクセル（CSS px）の位置にそろえる。
+ *  上端が半端な位置だと、高DPI画面でタイルの継ぎ目に細い白線が出るため（0〜1px だけ下げる） */
+function snapMapToPixel() {
+  if (!mapHost || !mapHost.isConnected) return;
+  mapHost.style.marginTop = '0px';
+  const top = mapHost.getBoundingClientRect().top + window.scrollY;
+  const off = Math.ceil(top - 0.01) - top;
+  if (off > 0.001) mapHost.style.marginTop = off + 'px';
+}
+window.addEventListener('resize', snapMapToPixel);
+
 async function mountMap() {
   const slot = $('#lmap-slot');
   if (!slot) { destroyMap(); return; }        // 地図ページを離れた
@@ -1194,6 +1205,7 @@ async function mountMap() {
 
   if (mapHost) {                               // 既存インスタンスを差し戻すだけ
     slot.appendChild(mapHost);
+    snapMapToPixel();
     if (mapObj && mapObj.kind === 'leaflet') mapObj.map.invalidateSize();
     applyPendingFit();
     refreshMarkers();
@@ -1204,6 +1216,7 @@ async function mountMap() {
   mapHost = document.createElement('div');
   mapHost.className = 'lmap';
   slot.appendChild(mapHost);
+  snapMapToPixel();
   try {
     if (wantBase === 'google') await createGoogleMap();
     else await createLeafletMap(wantBase);
