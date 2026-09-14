@@ -1,4 +1,4 @@
-import * as D from './data.js?v=5';
+import * as D from './data.js?v=6';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -84,7 +84,7 @@ function sidebar() {
   const nav = NAVS[ui.role];
   const counts = {
     '#/bookings': D.state.bookings.length || '',
-    '#/f': D.state.bookings.filter((b) => b.status === 'confirmed' && !b.shipment).length || '',
+    '#/f': facTasks().length || '',
   };
   return `
   <aside class="side">
@@ -101,8 +101,8 @@ function sidebar() {
         ${l}${counts[h] ? `<span class="cnt">${counts[h]}</span>` : ''}</a>`).join('')}
     </nav>
     <div class="side-foot">
-      DEMO 環境<br>データはブラウザ内のみ<br>
-      <a href="#" id="reset-demo">データを初期化</a>
+      DEMO 環境<br>データはこのブラウザ内のみ<br>
+      <a href="#" id="reset-demo">デモデータに戻す</a>
     </div>
   </aside>`;
 }
@@ -113,6 +113,7 @@ function topbar(title, ctx) {
     <div class="crumbs">${ROLE_LABEL[ui.role]} &rsaquo; <b>${esc(title)}</b></div>
     <div class="sp"></div>
     <div class="meta">${ctx || ''}</div>
+    <button class="btn btn-sm btn-ghost" id="open-guide" type="button">デモガイド</button>
   </header>`;
 }
 
@@ -127,6 +128,7 @@ function statusbar() {
     <span>確定予約 ${conf}</span>
     <span>仮押さえ ${holds}</span>
     <span class="sp"></span>
+    <span class="sb-note">施設名・数値は架空のデモデータ</span>
     <span>${D.ymd(D.TODAY)}</span>
   </div>`;
 }
@@ -720,12 +722,17 @@ function myFacilityId() {
   return b ? D.slotById(b.slotId).facilityId : 'f01';
 }
 
-function viewFacHome() {
-  const f = D.facilityById(myFacilityId());
-  const mine = D.state.bookings.filter((b) => D.slotById(b.slotId).facilityId === f.id && b.status === 'confirmed');
+/** 施設の「今日のタスク」。サイドメニューの件数と画面の中身を同じ定義にする */
+function facTasks(fid = myFacilityId()) {
+  const mine = D.state.bookings.filter((b) => b.facilityId === fid && b.status === 'confirmed');
   const needShip = mine.filter((b) => !b.shipment);
   const needReport = mine.filter((b) => b.shipment && !b.report && D.ymd(D.TODAY) > b.end);
-  const active = mine.filter((b) => D.ymd(D.TODAY) >= b.start && D.ymd(D.TODAY) <= b.end);
+  return Object.assign([...needShip, ...needReport], { needShip, needReport });
+}
+
+function viewFacHome() {
+  const f = D.facilityById(myFacilityId());
+  const { needShip, needReport } = facTasks(f.id);
 
   return `
   <div class="fac-shell">
@@ -870,7 +877,7 @@ function viewAdmin() {
             ${Object.entries(STATUS).map(([k, v]) => `<button class="chip ${ui.bkFilter.status === k ? 'on' : ''}" data-bkstatus="${k}">${v[0]}</button>`).join('')}
           </div></div>
         <div style="width:230px"><label class="f" for="bk-q">検索（施設・予約番号・商材）</label>
-          <input class="inp" id="bk-q" value="${esc(ui.bkFilter.q)}" placeholder="例: 大江戸 / BKG-2026"></div>
+          <input class="inp" id="bk-q" value="${esc(ui.bkFilter.q)}" placeholder="例: 青葉 / BKG-2026"></div>
       </div>
       <div class="panel-bd flush">
         ${filtered.length ? `<div class="tablewrap scrolly"><table class="t">
@@ -1458,10 +1465,13 @@ function bind() {
   const rs = $('#reset-demo');
   if (rs) rs.addEventListener('click', (e) => {
     e.preventDefault();
-    if (confirm('登録した予約と受入制限をすべて削除して初期状態に戻します。よろしいですか？')) {
-      D.resetAll(); toast('初期化しました'); render();
+    if (confirm('このブラウザで行った予約・受入制限の変更を破棄して、デモ用の初期データに戻します。よろしいですか？')) {
+      D.resetAll(); ui.sort = {}; ui.bkFilter = { status: '', q: '' };
+      toast('デモデータに戻しました'); render();
     }
   });
+  const og = $('#open-guide');
+  if (og) og.addEventListener('click', openGuide);
 
   // ホームのクイック検索
   const qgo = $('#q-go');
@@ -1785,6 +1795,64 @@ function bind() {
   }));
 }
 
+/* ---------- デモガイド ---------- */
+const GUIDE_KEY = 'mappa.guide.v1';
+const GUIDE_STEPS = [
+  ['#/search', '広告主', '空き枠を探して申し込む',
+    '期間と商材カテゴリを入れると、その期間に本当に空いている枠だけが出ます。施設を開いて日程を選び、申込から決済（テスト）まで進めます。'],
+  ['#/map', '広告主・運営', '設置マップで全国を見渡す',
+    '基準日を動かすと、その日にどの施設のどこへ何が置かれているかが変わります。拡大すると街区レベルまで見られます。'],
+  ['#/f', '提携施設', '今日のタスクを片付ける',
+    '荷物の受け取りと実施報告をワンタップで。施設のスタッフがスマホで使う前提の画面です。'],
+  ['#/f/calendar', '提携施設', '受け入れできない日を登録する',
+    '日をタップして受入不可にすると、広告主側の空き状況にすぐ反映されます。予約が入っている日は変更できません。'],
+  ['#/admin', '運営', 'ダッシュボードで全体を管理する',
+    '売上・未着荷・仮押さえ・施設マスタを横断して確認できます。'],
+];
+function guideHTML() {
+  return `
+  <div class="guide">
+    <div class="guide-kicker">DEMO</div>
+    <h2 id="guide-title">マッパ デモ環境へようこそ</h2>
+    <p>温浴施設のサンプリング枠・掲出枠を、<b>広告主・提携施設・運営</b>の3者で
+      予約から実施報告までやりとりするための業務システムの試作版です。</p>
+    <div class="guide-roles">
+      <div><b>広告主</b><span>空き枠の検索・予約・決済と進み具合の確認</span></div>
+      <div><b>提携施設</b><span>荷物の受け取り・実施報告と受入できない日の登録</span></div>
+      <div><b>運営</b><span>全予約・全施設の横断管理と売上の把握</span></div>
+    </div>
+    <div class="guide-steps-hd">おすすめの見かた<span>左上の「表示する立場」でいつでも切り替えられます</span></div>
+    <ol class="guide-steps">
+      ${GUIDE_STEPS.map(([h, who, t, d], i) => `<li>
+        <span class="n">${i + 1}</span>
+        <span class="tx"><span class="who">${who}</span><b>${t}</b><span class="d">${d}</span></span>
+        <button class="btn btn-sm btn-ghost" type="button" data-guide-go="${h}">開く</button></li>`).join('')}
+    </ol>
+    <div class="note note-info guide-note"><span class="lb">デモについて</span>
+      施設名・客層・実績の数値はすべて架空です。予約や設定はこのブラウザの中にだけ保存され、決済も発生しません。
+      左下の「デモデータに戻す」でいつでも最初の状態に戻せます。</div>
+    <div class="guide-ft">
+      <button class="btn" type="button" id="guide-close">はじめる</button>
+    </div>
+  </div>`;
+}
+function openGuide() {
+  openSheet(guideHTML(), () => {
+    const sh = $('.sheet');
+    sh.classList.add('sheet-wide');
+    sh.setAttribute('aria-labelledby', 'guide-title');
+    $('#guide-close').addEventListener('click', closeSheet);
+    $$('[data-guide-go]').forEach((b) => b.addEventListener('click', () => {
+      const h = b.dataset.guideGo;
+      closeSheet();
+      go(h);
+    }));
+  });
+  const c = $('#guide-close');
+  if (c) c.focus({ preventScroll: true });
+  try { localStorage.setItem(GUIDE_KEY, '1'); } catch (e) { /* 保存できなくても表示は続ける */ }
+}
+
 /* ---------- シート ---------- */
 let sheetOpener = null;
 function onSheetKey(e) {
@@ -1846,3 +1914,5 @@ window.addEventListener('hashchange', () => {
   render();
 });
 render();
+// 初めて開いた人にはデモガイドを出す
+try { if (!localStorage.getItem(GUIDE_KEY)) openGuide(); } catch (e) { /* 保存領域が使えない環境では出さない */ }

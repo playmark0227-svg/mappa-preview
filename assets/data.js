@@ -92,7 +92,7 @@ const BASE_FACILITIES = [
     ],
   },
   {
-    id: 'f02', lng: 139.9254, lat: 35.8713, name: 'スパメッツァ 流山', brand: 'スパメッツァ', pref: '12', prefName: '千葉県',
+    id: 'f02', lng: 139.9254, lat: 35.8713, name: '森のサウナ 流山', brand: '森のサウナ', pref: '12', prefName: '千葉県',
     city: '流山市', station: '流山おおたかの森駅', walkMin: 5, hours: '9:00–25:00', holiday: null,
     hue: 168, monthlyVisitors: 38000, weekdayRatio: 55, femaleRatio: 44,
     ageMix: { '20代': 24, '30代': 30, '40代': 26, '50代': 14, '60代〜': 6 },
@@ -152,7 +152,7 @@ const BASE_FACILITIES = [
     ],
   },
   {
-    id: 'f05', lng: 136.9083, lat: 35.17, name: '天空スパ 名古屋栄', brand: '天空スパ', pref: '23', prefName: '愛知県',
+    id: 'f05', lng: 136.9083, lat: 35.17, name: 'そらの湯 名古屋栄', brand: 'そらの湯', pref: '23', prefName: '愛知県',
     city: '名古屋市中区', station: '栄駅', walkMin: 4, hours: '24時間', holiday: null,
     hue: 262, monthlyVisitors: 27500, weekdayRatio: 58, femaleRatio: 41,
     ageMix: { '20代': 26, '30代': 31, '40代': 24, '50代': 13, '60代〜': 6 },
@@ -172,7 +172,7 @@ const BASE_FACILITIES = [
     ],
   },
   {
-    id: 'f06', lng: 139.8042, lat: 35.6453, name: '大江戸の湯 江東', brand: '大江戸の湯', pref: '13', prefName: '東京都',
+    id: 'f06', lng: 139.8042, lat: 35.6453, name: '湯けむり横丁 東雲', brand: '湯けむり横丁', pref: '13', prefName: '東京都',
     city: '江東区', station: '東雲駅', walkMin: 10, hours: '11:00–翌9:00', holiday: null,
     hue: 340, monthlyVisitors: 42000, weekdayRatio: 51, femaleRatio: 54,
     ageMix: { '20代': 19, '30代': 26, '40代': 27, '50代': 19, '60代〜': 9 },
@@ -257,14 +257,14 @@ const SEED_ROWS = [
   ['g16','大宮 匠の湯','11','埼玉県','さいたま市大宮区','大宮駅',7,139.624,35.906,'sauna'],
   ['g17','川越 蔵の街サウナ','11','埼玉県','川越市','本川越駅',5,139.482,35.92,'small'],
   ['g18','越谷 レイクの湯','11','埼玉県','越谷市','越谷レイクタウン駅',8,139.818,35.879,'family'],
-  ['g19','船橋 グランドサウナ','12','千葉県','船橋市','船橋駅',5,139.985,35.701,'sauna'],
+  ['g19','船橋 海老川サウナ','12','千葉県','船橋市','船橋駅',5,139.985,35.701,'sauna'],
   ['g20','幕張 ベイスパ','12','千葉県','千葉市美浜区','海浜幕張駅',7,140.043,35.648,'urban'],
   ['g21','上野 御徒町サウナ','13','東京都','台東区','御徒町駅',2,139.7745,35.7075,'urban'],
   ['g22','高円寺 ゆとりの湯','13','東京都','杉並区','高円寺駅',4,139.6497,35.7056,'small'],
-  ['g23','錦糸町 楽天地の湯','13','東京都','墨田区','錦糸町駅',3,139.814,35.697,'night'],
-  ['g24','池袋 タイムズの湯','13','東京都','豊島区','池袋駅',6,139.7109,35.7295,'urban'],
-  ['g25','新宿 十二社の湯','13','東京都','新宿区','西新宿駅',5,139.6917,35.6938,'night'],
-  ['g26','蒲田 黒湯温泉','13','東京都','大田区','蒲田駅',7,139.716,35.5625,'family'],
+  ['g23','錦糸町 すみだの湯','13','東京都','墨田区','錦糸町駅',3,139.814,35.697,'night'],
+  ['g24','池袋 ふくろうの湯','13','東京都','豊島区','池袋駅',6,139.7109,35.7295,'urban'],
+  ['g25','西新宿 高層の湯','13','東京都','新宿区','西新宿駅',5,139.6917,35.6938,'night'],
+  ['g26','蒲田 くろ湯の里','13','東京都','大田区','蒲田駅',7,139.716,35.5625,'family'],
   ['g27','町田 相模の湯','13','東京都','町田市','町田駅',9,139.4467,35.542,'family'],
   ['g28','川崎 大師の湯','14','神奈川県','川崎市川崎区','川崎大師駅',6,139.73,35.534,'family'],
   ['g29','横須賀 ベイサイドサウナ','14','神奈川県','横須賀市','横須賀中央駅',5,139.672,35.279,'sauna'],
@@ -284,8 +284,8 @@ const SEED_ROWS = [
   ['g43','四日市 伊勢湾スパ','24','三重県','四日市市','近鉄四日市駅',7,136.616,34.966,'small'],
   ['g44','大津 びわ湖の湯','25','滋賀県','大津市','大津駅',9,135.865,35.011,'family'],
   ['g45','京都 七条サウナ','26','京都府','京都市下京区','京都駅',5,135.759,34.986,'urban'],
-  ['g46','梅田 スカイスパ','27','大阪府','大阪市北区','大阪駅',4,135.4959,34.7025,'night'],
-  ['g47','難波 なにわの湯','27','大阪府','大阪市浪速区','難波駅',6,135.501,34.666,'night'],
+  ['g46','梅田 はなれの湯','27','大阪府','大阪市北区','大阪駅',4,135.4959,34.7025,'night'],
+  ['g47','難波 みなみ湯','27','大阪府','大阪市浪速区','難波駅',6,135.501,34.666,'night'],
   ['g48','天王寺 あべのサウナ','27','大阪府','大阪市阿倍野区','天王寺駅',4,135.514,34.646,'sauna'],
   ['g49','堺 泉北の湯','27','大阪府','堺市南区','泉ケ丘駅',8,135.506,34.47,'family'],
   ['g50','神戸 三宮ベイサウナ','28','兵庫県','神戸市中央区','三宮駅',5,135.195,34.695,'urban'],
@@ -299,7 +299,7 @@ const SEED_ROWS = [
   ['g58','下関 海峡サウナ','35','山口県','下関市','下関駅',7,130.924,33.95,'small'],
   ['g59','徳島 眉山の湯','36','徳島県','徳島市','徳島駅',11,134.551,34.074,'small'],
   ['g60','高松 玉藻の湯','37','香川県','高松市','高松駅',6,134.047,34.351,'family'],
-  ['g61','松山 道後別邸','38','愛媛県','松山市','道後温泉駅',4,132.786,33.851,'resort'],
+  ['g61','松山 いよの湯','38','愛媛県','松山市','道後温泉駅',4,132.786,33.851,'resort'],
   ['g62','高知 はりまや温泉','39','高知県','高知市','高知駅',9,133.544,33.567,'small'],
   ['g63','博多 中洲サウナ','40','福岡県','福岡市博多区','中洲川端駅',3,130.406,33.593,'night'],
   ['g64','天神 ぐらんの湯','40','福岡県','福岡市中央区','天神駅',5,130.399,33.59,'urban'],
@@ -477,19 +477,21 @@ export const slotById = (id) => ALL_SLOTS.find((s) => s.id === id);
 export const facilityById = (id) => FACILITIES.find((f) => f.id === id);
 
 /* ---------- 永続化 ---------- */
-const KEY = 'mappa.state.v1';
+// v2: 初回にデモデータを入れるようにしたので、旧版で触った状態は引き継がない
+const KEY = 'mappa.state.v2';
 const blank = () => ({ bookings: [], overrides: [], seq: 1 });
 
 export let state = load();
 
 function load() {
   try {
+    localStorage.removeItem('mappa.state.v1');
     const raw = localStorage.getItem(KEY);
-    if (!raw) return blank();
+    if (!raw) return { ...blank(), needsSeed: true };
     const s = JSON.parse(raw);
     return { ...blank(), ...s };
   } catch (e) {
-    return blank();
+    return { ...blank(), needsSeed: true };
   }
 }
 export function save() {
@@ -498,10 +500,12 @@ export function save() {
   } catch (e) { /* プライベートモード等 */ }
   invalidate();
 }
+/** デモ用の初期データに戻す */
 export function resetAll() {
   state = blank();
-  try { localStorage.removeItem(KEY); } catch (e) {}
   invalidate();
+  seedDemo();
+  save();
 }
 
 /* ---------- 在庫エンジン ---------- */
@@ -827,4 +831,101 @@ export function placementSummary(dateStr) {
     const openSlots = f.slots.filter((s) => dayInfo(s.id, dateStr).available > 0).length;
     return { f, items, cats: [...new Set(items.map((i) => i.cat))], openSlots };
   });
+}
+
+/* ---------- デモ用の初期データ ---------- */
+/* 初回表示と「デモデータに戻す」で投入する。広告主・施設・運営のどの画面を開いても
+   いま何が動いているかが見えるよう、終了済み・実施中・これからの予約を混ぜる。
+   日付は今日からの相対で持ち、他社ブロックと枠数・同一カテゴリ排他が矛盾しない開始日を探して置く。
+   opts は [カテゴリ, 商材] の候補。先頭から順に、置ける日程が見つかったものを使う。 */
+const DEMO_BOOKINGS = [
+  { slot: 'f04-s1', at: -48, days: 14, qty: 700, shipped: true, report: 652,
+    opts: [['日用品', 'ボタニカル洗顔フォーム 8g'], ['スキンケア', '保湿ミスト 10mL']] },
+  { slot: 'f03-s2', at: 52, days: 14, qty: 600, cancel: true, opts: [['スキンケア', 'オールインワンジェル 5g']] },
+  { slot: 'f06-s2', at: 34, days: 14, qty: 1500,
+    opts: [['スキンケア', '薬用美白美容液 3mL'], ['ヘアケア', 'ダメージ補修トリートメント 10g']] },
+  { slot: 'f05-s1', at: 24, days: 14, qty: 1000,
+    opts: [['飲料', '炭酸ミネラルウォーター 280mL'], ['健康食品', '発酵黒酢ドリンク 100mL']] },
+  { slot: 'g02-s1', at: -6, days: 14, qty: 900, shipped: true,
+    opts: [['飲料', '経口補水ゼリー 150g'], ['健康食品', '発酵黒酢ドリンク 100mL'], ['サプリメント', 'ととのいサプリ 3粒入']] },
+  { slot: 'g69-s1', at: -4, days: 21, qty: 1100, shipped: true,
+    opts: [['サプリメント', 'ととのいサプリ 3粒入'], ['ヘアケア', 'スカルプシャンプー 10mL'], ['日用品', '炭酸入浴剤 1錠']] },
+  { slot: 'f08-s2', at: -2, days: 14, qty: 500, shipped: true,
+    opts: [['スキンケア', 'ナイアシンアミド美容液 2mL'], ['日用品', 'フェイスタオル（試供品）']] },
+  // 施設画面は「最後に確定した予約の施設」を開くので、青葉の湯（f01）を最後に置く
+  { slot: 'f01-s1', at: -19, days: 14, qty: 800, shipped: true,
+    opts: [['飲料', 'スポーツドリンク 200mL'], ['健康食品', 'プロテインバー 1本']] },
+  { slot: 'f01-s2', at: -5, days: 14, qty: 800, shipped: true,
+    opts: [['スキンケア', 'うるおいクレンジングミルク 10mL'], ['ヘアケア', 'ヘアオイル 3mL']] },
+  { slot: 'f01-s3', at: 10, days: 30, qty: 2,
+    opts: [['サプリメント', 'ととのいサプリ 告知ポスター'], ['アパレル', 'サウナハット新作 告知ポスター'], ['日用品', '炭酸入浴剤 告知ポスター']] },
+];
+const DEMO_CONTACTS = ['田中 太郎', '佐藤 花子', '鈴木 一郎'];
+
+function demoFits(slot, a, days, cat) {
+  const s = ymd(addDays(TODAY, a)), e = ymd(addDays(TODAY, a + days - 1));
+  for (let i = 0; i < days; i++) {
+    if (dayInfo(slot.id, ymd(addDays(TODAY, a + i))).available < 1) return false;
+  }
+  const f = slot.facility;
+  if (f.slots.some((sl) => blocksOverlapping(sl.id, s, e).some((bl) => bl.cat === cat))) return false;
+  return !state.bookings.some((b) => b.facilityId === f.id && b.status === 'confirmed' &&
+    b.category === cat && b.start <= e && b.end >= s);
+}
+
+function seedDemo() {
+  DEMO_BOOKINGS.forEach((d, i) => {
+    const slot = slotById(d.slot);
+    if (!slot) return;
+    // 希望の開始日に置けなければ前後にずらす。終了済み・実施中・これからの区分は変えない
+    const phaseOk = (c) => d.at + d.days <= 0 ? c + d.days <= 0
+      : d.at <= 0 ? c <= 0 && c + d.days > 1
+      : c >= slot.minLead - 4;
+    let at = null, cat = null, product = null;
+    if (d.cancel) [at, [cat, product]] = [d.at, d.opts[0]];
+    for (const [c0, p0] of d.opts) {
+      for (let k = 0; k <= 12 && at == null; k++) {
+        for (const c of k ? [d.at + k, d.at - k] : [d.at]) {
+          if (at == null && phaseOk(c) && demoFits(slot, c, d.days, c0)) { at = c; cat = c0; product = p0; }
+        }
+      }
+      if (at != null) break;
+    }
+    if (at == null) return;
+    const start = ymd(addDays(TODAY, at)), end = ymd(addDays(TODAY, at + d.days - 1));
+    const due = deliveryDue(slot, start);
+    const created = addDays(TODAY, Math.min(-2, at - 30));
+    const total = quote(slot.id, start, end, 1, false);
+    const seq = state.seq++;
+    const b = {
+      id: 'BKG-' + String(1000 + seq).slice(1),
+      slotId: slot.id, facilityId: slot.facilityId, start, end, qty: 1, category: cat, total, deliveryDue: due,
+      no: `BKG-${ymd(created).replace(/-/g, '')}-${String(seq).padStart(3, '0')}`,
+      status: 'confirmed', createdAt: +created, confirmedAt: +created, holdExpiresAt: null,
+      product, sampleQty: d.qty, contact: DEMO_CONTACTS[i % DEMO_CONTACTS.length],
+      shipDate: ymd(addDays(parseYmd(due), -3)), memo: '',
+      shipment: d.shipped ? { receivedAt: +addDays(parseYmd(due), -1) } : null,
+      report: d.report ? { qty: d.report, memo: '夕方以降の消化が早く、最終日の午前に配り切りました。' } : null,
+    };
+    if (d.cancel) {
+      // 開始の約55日前に取消した想定（59〜31日前 = 返金70%）
+      b.status = 'cancelled';
+      b.refundRate = 70;
+      b.refundAmount = Math.floor((total.net * 70) / 100) + Math.floor((total.tax * 70) / 100);
+    }
+    state.bookings.push(b);
+    invalidate();
+  });
+  state.overrides.push({
+    id: 'ov-demo-1', slotId: 'f01-s2', from: ymd(addDays(TODAY, 45)), to: ymd(addDays(TODAY, 47)),
+    capacity: 0, reason: '設備工事',
+  });
+  invalidate();
+}
+
+// 初回表示ではデモデータを入れておく（在庫エンジンの初期化が済んだここで行う）
+if (state.needsSeed) {
+  delete state.needsSeed;
+  seedDemo();
+  save();
 }
