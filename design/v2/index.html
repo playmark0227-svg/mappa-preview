@@ -1,0 +1,1416 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="温浴施設プロモーション枠プラットフォーム「マッパ」の改善仕様・要件定義案（v2）">
+<style>html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>マッパ v2 設計書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDPMincho:wght@700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #F3F6F6;
+  --surface: #FFFFFF;
+  --surface-2: #EEF3F3;
+  --ink: #1A2227;
+  --ink-2: #47545B;
+  --ink-3: #6E7B82;
+  --line: #D6DEE0;
+  --line-strong: #A9B6BA;
+  --accent: #15616F;
+  --accent-soft: #E3EFF1;
+  --hinoki: #9A6834;
+  --hinoki-soft: #F6ECE1;
+  --plum: #74497A;
+  --plum-soft: #F3EAF4;
+  --ok: #1C7C4A; --ok-soft: #E4F3EA;
+  --warn: #8A5A08; --warn-soft: #FBF1DC;
+  --bad: #A33227; --bad-soft: #FAE9E7;
+  --serif: "BIZ UDPMincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #0F1618; --surface: #162023; --surface-2: #1C282C;
+    --ink: #E3ECEC; --ink-2: #B3C1C4; --ink-3: #8A999E;
+    --line: #2B393D; --line-strong: #4A5B60;
+    --accent: #62B4C2; --accent-soft: #1A3136;
+    --hinoki: #D6A36D; --hinoki-soft: #33271B;
+    --plum: #C79BCC; --plum-soft: #2E2230;
+    --ok: #6CC795; --ok-soft: #173024;
+    --warn: #E0B25A; --warn-soft: #33290F;
+    --bad: #EE8E83; --bad-soft: #3A1E1B;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #0F1618; --surface: #162023; --surface-2: #1C282C;
+  --ink: #E3ECEC; --ink-2: #B3C1C4; --ink-3: #8A999E;
+  --line: #2B393D; --line-strong: #4A5B60;
+  --accent: #62B4C2; --accent-soft: #1A3136;
+  --hinoki: #D6A36D; --hinoki-soft: #33271B;
+  --plum: #C79BCC; --plum-soft: #2E2230;
+  --ok: #6CC795; --ok-soft: #173024;
+  --warn: #E0B25A; --warn-soft: #33290F;
+  --bad: #EE8E83; --bad-soft: #3A1E1B;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--ground); color: var(--ink);
+  font-family: var(--sans); font-size: 15px; line-height: 1.8;
+  padding-inline: 20px; padding-block: 0 64px;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code, .mono { font-family: var(--mono); font-size: .86em; }
+code { background: var(--surface-2); padding: .08em .35em; border-radius: 3px; }
+strong { font-weight: 700; }
+
+.layout { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 1060px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 0; } .toc { display: none; } }
+
+/* 目次 */
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; padding-top: 40px; font-size: 13px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.toc .lb { font-size: 11px; letter-spacing: .12em; color: var(--ink-3); margin-bottom: 8px; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.toc a { display: block; padding: 4px 10px; border-radius: 4px; color: var(--ink-2); text-decoration: none; line-height: 1.5; }
+.toc a:hover { background: var(--surface-2); color: var(--ink); }
+.toc .n { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-right: 6px; }
+
+main { min-width: 0; padding-top: 40px; }
+
+/* 表紙 */
+.cover { padding-block: 8px 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.cover .kicker { font-size: 12px; letter-spacing: .14em; color: var(--accent); font-weight: 700; }
+.cover h1 { font-family: var(--serif); font-size: clamp(28px, 4vw, 40px); line-height: 1.35; margin: 10px 0 12px; text-wrap: balance; }
+.cover .lead { font-size: 16px; color: var(--ink-2); max-width: 44em; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 18px; font-size: 12.5px; color: var(--ink-3); }
+.meta b { color: var(--ink-2); font-weight: 700; margin-right: 6px; }
+
+section { padding-top: 44px; scroll-margin-top: 16px; }
+h2 { font-family: var(--serif); font-size: 26px; line-height: 1.45; margin: 0 0 6px; text-wrap: balance; }
+h2 .n { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 500; display: block; letter-spacing: .06em; margin-bottom: 2px; }
+h3 { font-size: 18px; margin: 34px 0 8px; line-height: 1.5; text-wrap: balance; }
+h4 { font-size: 15px; margin: 22px 0 6px; }
+p { margin: 0 0 14px; max-width: 46em; }
+.sub { color: var(--ink-2); font-size: 14.5px; max-width: 46em; }
+ul.plain, ol.plain { margin: 0 0 14px; padding-left: 1.3em; max-width: 46em; }
+ul.plain li, ol.plain li { margin: 4px 0; }
+
+/* 結論ボックス */
+.decisions { display: grid; gap: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin: 18px 0; }
+.decision { display: grid; grid-template-columns: 138px minmax(0, 1fr); gap: 16px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.decision:first-child { border-top: 0; }
+.decision .k { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.decision p { margin: 0; }
+@media (max-width: 640px) { .decision { grid-template-columns: 1fr; gap: 4px; } }
+
+/* ステータスのピル */
+.pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; line-height: 1.7; vertical-align: 1px; }
+.p-adopt { background: var(--ok-soft); color: var(--ok); }
+.p-cond { background: var(--warn-soft); color: var(--warn); }
+.p-change { background: var(--bad-soft); color: var(--bad); }
+.p-info { background: var(--accent-soft); color: var(--accent); }
+.role { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 0 8px; border-radius: 4px; white-space: nowrap; line-height: 1.8; }
+.r-ops { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line-strong); }
+.r-fac { background: var(--hinoki-soft); color: var(--hinoki); }
+.r-agc { background: var(--accent-soft); color: var(--accent); }
+.r-usr { background: var(--plum-soft); color: var(--plum); }
+
+/* 注意 */
+.note { border-radius: var(--r); padding: 14px 18px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); max-width: 52em; }
+.note .lb { font-size: 12px; font-weight: 700; letter-spacing: .06em; margin-bottom: 4px; display: block; }
+.note p:last-child, .note ul:last-child { margin-bottom: 0; }
+.note.warn { background: var(--warn-soft); border-color: transparent; }
+.note.warn .lb { color: var(--warn); }
+.note.info { background: var(--accent-soft); border-color: transparent; }
+.note.info .lb { color: var(--accent); }
+
+/* 表 */
+.tw { overflow-x: auto; margin: 14px 0 20px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-top: 1px solid var(--line); }
+thead th { border-top: 0; background: var(--surface-2); font-size: 12.5px; color: var(--ink-2); font-weight: 700; white-space: nowrap; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.c, th.c { text-align: center; }
+td .dim, .dim { color: var(--ink-3); }
+tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+table.min th:first-child, table.min td:first-child { white-space: nowrap; }
+.yes { color: var(--ok); font-weight: 700; }
+.no { color: var(--ink-3); }
+.part { color: var(--warn); font-weight: 700; }
+
+/* 課題→打ち手 */
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin: 12px 0; }
+.pair > div { padding: 14px 18px; }
+.pair > div + div { border-left: 1px solid var(--line); }
+.pair .lb { font-size: 12px; font-weight: 700; color: var(--ink-3); display: block; margin-bottom: 2px; }
+.pair p { margin: 0; }
+@media (max-width: 700px) { .pair { grid-template-columns: 1fr; } .pair > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+
+/* 図 */
+figure.dg { margin: 18px 0 24px; }
+.dg-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.dg-scroll svg { display: block; width: 100%; min-width: 820px; height: auto; color: var(--ink); }
+figcaption { font-size: 13px; color: var(--ink-2); margin-top: 8px; max-width: 52em; }
+.dg-t { fill: currentColor; font-family: var(--sans); font-size: 12.5px; }
+.dg-b { font-weight: 700; font-size: 13px; }
+.dg-s { font-size: 11.5px; fill: var(--ink-2); }
+.dg-l { font-size: 11px; fill: var(--ink-3); }
+.dg-box { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1; }
+.dg-ext { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 4 3; }
+.dg-core { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+.dg-db { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1; }
+.dg-hl { stroke: var(--hinoki); stroke-width: 1.6; }
+.dg-pub { stroke: var(--accent); stroke-width: 1.6; }
+.dg-tag { fill: var(--surface); stroke: var(--line-strong); }
+.dg-user { fill: var(--surface); stroke: var(--line-strong); }
+.dg-user.dg-c { stroke: var(--plum); stroke-width: 1.4; }
+.dg-user.dg-f { stroke: var(--hinoki); stroke-width: 1.4; }
+.dg-user.dg-a { stroke: var(--accent); stroke-width: 1.4; }
+.dg-user.dg-o { stroke: var(--ink); stroke-width: 1.4; }
+.dg-ln { stroke: var(--ink-2); stroke-width: 1.2; fill: none; }
+.dg-dash { stroke-dasharray: 5 4; }
+.dg-head { fill: var(--ink-2); }
+pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; overflow-x: auto; margin: 14px 0 8px; }
+
+/* 折りたたみ */
+details.tbl { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin: 8px 0; }
+details.tbl > summary { cursor: pointer; padding: 10px 16px; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+details.tbl > summary::-webkit-details-marker { display: none; }
+details.tbl > summary::before { content: "＋"; font-family: var(--mono); color: var(--ink-3); width: 1em; }
+details.tbl[open] > summary::before { content: "－"; }
+details.tbl > summary .tn { font-family: var(--mono); font-weight: 500; font-size: 14px; }
+details.tbl > summary .td { color: var(--ink-2); font-size: 13.5px; }
+details.tbl > summary .pill { margin-left: auto; }
+details.tbl .tw { margin: 0 12px 12px; }
+details.tbl table td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+
+/* ロードマップ */
+.gantt { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; margin: 14px 0 8px; }
+.g-grid { display: grid; grid-template-columns: 190px repeat(44, minmax(16px, 1fr)); row-gap: 8px; min-width: 840px; align-items: center; font-size: 12.5px; }
+.g-grid .g-h { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); text-align: left; border-left: 1px solid var(--line); padding-left: 3px; }
+.g-grid .g-h { grid-row: 1; }
+.g-grid .g-lb { grid-column: 1; padding-right: 10px; line-height: 1.4; }
+.g-grid .g-lb small { display: block; color: var(--ink-3); font-size: 11px; }
+.g-bar { height: 26px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.g-p0 { background: var(--surface-2); color: var(--ink-2); border: 1px dashed var(--line-strong); }
+.g-p1 { background: var(--hinoki-soft); color: var(--hinoki); }
+.g-p2 { background: var(--accent-soft); color: var(--accent); }
+.g-p3 { background: var(--plum-soft); color: var(--plum); }
+.g-p4 { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line-strong); }
+.g-side { background: transparent; border: 1px dashed var(--line-strong); color: var(--ink-2); font-weight: 400; }
+
+.small { font-size: 13px; color: var(--ink-2); }
+.src { font-size: 12.5px; color: var(--ink-3); }
+.src a { color: var(--ink-2); word-break: break-all; }
+hr.sep { border: 0; border-top: 1px solid var(--line); margin: 40px 0 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <div class="lb">目次</div>
+  <ol>
+    <li><a href="#s0"><span class="n">0</span>結論</a></li>
+    <li><a href="#s1"><span class="n">1</span>課題と設計方針</a></li>
+    <li><a href="#s2"><span class="n">2</span>全体システム構成</a></li>
+    <li><a href="#s3"><span class="n">3</span>権限とセキュリティ</a></li>
+    <li><a href="#s4"><span class="n">4</span>利用者ごとの機能とUI</a></li>
+    <li><a href="#s5"><span class="n">5</span>主要な仕組みの詳細</a></li>
+    <li><a href="#s6"><span class="n">6</span>データモデル</a></li>
+    <li><a href="#s7"><span class="n">7</span>開発フェーズと工数</a></li>
+    <li><a href="#s8"><span class="n">8</span>費用の目安</a></li>
+    <li><a href="#s9"><span class="n">9</span>リスクと確認事項</a></li>
+    <li><a href="#sa"><span class="n">付</span>調査の出典</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="kicker">要件定義案 ｜ v2 ドラフト</div>
+  <h1>マッパ v2 設計書</h1>
+  <p class="lead">温浴施設のプロモーション枠を、他の代理店も含めた業界共通のスケジュール基盤にする。あわせて、施設と一般ユーザーはLINEから開くだけで使える形にする。そのための改善仕様と要件定義です。</p>
+  <div class="meta">
+    <span><b>版</b>v2.0 ドラフト</span>
+    <span><b>作成日</b>2026年9月25日</span>
+    <span><b>土台</b>既存「MVP設計書」（2026年9月3日）からの差分</span>
+    <span><b>調査時点</b>2026年9月（LINE・法令の数値は公式情報で再確認済み）</span>
+  </div>
+</header>
+
+<!-- ============ 0 ============ -->
+<section id="s0">
+  <h2><span class="n">0</span>結論（最初に読む）</h2>
+  <p class="sub">依頼の5項目は、形を一部調整したうえで実現できます。下の対応表で「条件付き」「変更提案」とした項目は、費用・LINEの規約・法令を理由に、依頼の文面と形を変えています。影響が大きいのは次の3点です。①毎日17時の全員配信（既定は週1回＋新着があった日にする）、②一般向けLINEでの広告主・施設の情報の配信（LINEヤフー社への事前確認が前提）、③4権限だけのアクセス制御（所属もあわせて判定する）。</p>
+
+  <div class="decisions">
+    <div class="decision"><div class="k">基盤の考え方</div><p>在庫の管理は既存設計のコア（日次在庫・二重予約を防ぐ制約・競合カテゴリの排他）をそのまま使います。そのうえで、他社案件を<strong>「在庫を1台ぶん使うブロック」</strong>として登録できるようにします。使っている台数はシステムが自動で足し上げるので、施設が残りの台数を計算し直す必要はありません（休館などで枠ごと止める「受入不可」とは別の仕組みです）。</p></div>
+    <div class="decision"><div class="k">中立性</div><p>マッパの運営自身も枠を売る当事者です。そのため、マスキングした案件の詳細（広告主名・商材名）と、他社案件の中身（どの代理店の、何のカテゴリの案件か）は、<strong>運営の業務画面と運営ロールからは見えない</strong>設計にします。他代理店に無料で使ってもらうための前提条件です。</p></div>
+    <div class="decision"><div class="k">LINEの使い方</div><p>一般ユーザーは<strong>LINEミニアプリ</strong>（LINEヤフー社が新規作成に推奨）、施設スタッフは<strong>LIFF</strong>を使います。どちらもLINEから開くだけでログインが済みます。代理店・広告主・運営は、PCで使う通常のWeb画面です。代理店・広告主はLINEでのログインも選べます（任意）。運営はLINEを使わず、会社アカウントのSSO＋多要素認証を必須にします。</p></div>
+    <div class="decision"><div class="k">公式アカウント</div><p>依頼どおり2つにします（一般向け・施設向け）。依頼の「施設・管理者用」の「管理者」は、施設の管理者と解釈しています。どちらも運営法人名義の同じプロバイダー（LINE側でチャネルをまとめる単位）に置きます。ただしLINEの規約により、<strong>2つのアカウントの間で利用者情報を使い回すことはできません</strong>。データも最初から分けて持ちます。</p></div>
+    <div class="decision"><div class="k">配信</div><p>毎日17時の全員配信は、友だち1万人で<strong>月約79万円（税別）</strong>かかります。友だちが配信を拒否（ブロック）する理由の1位も「配信が多すぎる」です。そこで、既定は<strong>週1回＋お気に入り施設やエリアに新着があった日だけ（新着は1人週2回まで）</strong>にします。毎日配信は本人が選んだ場合に限ります。</p></div>
+    <div class="decision"><div class="k">特典</div><p>主力は、登録者全員に配る割引（景品規制の対象外）にします。「抽選で半額」は、来館して使う以上、景品表示法の一般懸賞として扱うのが安全です（取引に付随するかは法務で確認します）。上限額（最高額は取引価額の20倍・5,000円以上なら10万円、総額は売上予定総額の2%）をシステムで自動計算し、法務の承認を必須にします。</p></div>
+    <div class="decision"><div class="k">まとめサイト</div><p>広告主と施設の両方が公開を許可した案件だけを載せます。1イベント1ページとし、情報が薄いページは検索対象から外します（noindex）。広告主が費用を出したものには「PR」を自動で付けます。ランキングは数えられる指標だけで並べ、広告費は並び順に使いません。日本ではGoogleのイベント表示（リッチリザルト）が使えないため、それを当てにした設計にはしません。</p></div>
+    <div class="decision"><div class="k">収益化</div><p>施設はずっと無料です。代理店・広告主も無料で使え、代理店が顧客に見せる共有ページに「Powered by Mappa」と広告枠が入ります。有料プランでは非表示にでき、分析・メンバー追加・外部連携も使えます。マッパが販売する枠のテイクレート（既存設計の30%）はそのまま続けます。</p></div>
+    <div class="decision"><div class="k">期間と工数</div><p>準備（Phase 0・4週）のあと開発を4段階で進め、全体で約<strong>43週</strong>、開発工数は約<strong>375人日</strong>（エンジニア2名）です。これとは別に、デザイナー0.5名（約95人日）とPM（兼務）が付きます。先に施設のスケジュール基盤を作り、次に代理店への開放、そのあと一般ユーザー向け、最後に収益化の順で進めます。</p></div>
+  </div>
+
+  <div class="note warn">
+    <span class="lb">着手前に必ず確認が必要なこと</span>
+    <p>LINE公式アカウントの利用規約（第18条6号）は、事前の承諾なく公式アカウントを<strong>第三者のための広告媒体</strong>として使うことを禁止しています。一般向けアカウントで広告主のサンプリングや施設の特典を配信することがこれにあたるかどうかは、LINEヤフー社（または認定パートナー）に事前に確認します。結果によっては、配信の形を変えるか、同社の広告メニュー「コラボアカウント」を使います。確認はPhase 0（準備）で行います。</p>
+  </div>
+
+  <h3>依頼内容への対応</h3>
+  <div class="tw"><table class="min">
+    <thead><tr><th>依頼</th><th>判定</th><th>この設計での扱い</th></tr></thead>
+    <tbody>
+      <tr><td>① 他社案件のマスキング入力</td><td><span class="pill p-adopt">依頼どおり＋強化</span></td><td>公開レベルを3段階から選べます。ブロックの台数は自動で足し上げて残りの空きを計算し、競合カテゴリの排他判定にも加わります。詳細は運営にも見せません。</td></tr>
+      <tr><td>① 運営による代行・一括入力</td><td><span class="pill p-adopt">依頼どおり</span></td><td>マッパが、システム上の予約・決済（マッパ販売）を通さずに決めた自社の案件は、運営が所有者となってブロックとして一括登録します。施設から頼まれた代行入力では、詳細欄を作りません。</td></tr>
+      <tr><td>② ネイティブアプリの廃止</td><td><span class="pill p-adopt">依頼どおり</span></td><td>専用アプリは作りません。施設はLIFF、一般ユーザーはLINEミニアプリ、代理店・広告主・運営はWeb画面を使います。既存設計で将来の候補としていた施設向けネイティブアプリも外します。</td></tr>
+      <tr><td>② LINEでワンタップログイン</td><td><span class="pill p-cond">条件付き</span></td><td>一般ユーザーはLINEミニアプリ、施設スタッフはLIFFを使います。代理店・広告主にはLINEを必須にしません（会社の方針で個人LINEを業務に使えない場合があるため）。運営はLINEを使わず、SSO＋多要素認証にします。</td></tr>
+      <tr><td>② 公式アカウントを2つ運用</td><td><span class="pill p-adopt">依頼どおり</span></td><td>同じプロバイダー配下に置きます。利用者情報はアカウントごとに分けて管理します（LINEの規約）。「管理者」は施設の管理者と解釈しています。</td></tr>
+      <tr><td>② 属性の簡易アンケート</td><td><span class="pill p-adopt">依頼どおり</span></td><td>性別・年代・居住地に「よく行くエリア」を加えます。性別や年代は通常のLINEのAPIでは取れないため、自前で聞きます。</td></tr>
+      <tr><td>③ 限定特典・クーポン・半額抽選・オリジナルグッズ</td><td><span class="pill p-cond">条件付き</span></td><td>全員配布の割引を主力にします。抽選は、景品規制の上限を自動で計算し、法務の承認を通したものだけ出します。グッズは店頭での受け取りに限ります（全員配布なら総付景品、抽選なら一般懸賞として上限を計算）。</td></tr>
+      <tr><td>③ サウナサブスク連携</td><td><span class="pill p-cond">条件付き</span></td><td>主なサブスクには公開APIがないため、当面は提携施設と会員向け特典を運営が手動・CSVで登録します。API連携は提携交渉とあわせて後のフェーズで検討します。</td></tr>
+      <tr><td>③ 毎日17時の自動プッシュ</td><td><span class="pill p-change">変更提案</span></td><td>既定は週1回＋新着があった日だけ（新着は1人週2回まで）。毎日は本人が選んだ場合のみとします。17時はA/Bテストで検証します。</td></tr>
+      <tr><td>③ 属性・位置情報に応じたおすすめ</td><td><span class="pill p-cond">条件付き</span></td><td>LINEでは位置情報を常に取れないため、配信は住まいとよく行くエリアで出し分け、現在地はミニアプリを開いたときだけ使います。性別・年代は、おすすめの順位と対象の絞り込みに使います。</td></tr>
+      <tr><td>③ SEOまとめサイトの自動生成</td><td><span class="pill p-cond">条件付き</span></td><td>公開の許可を得た案件だけを載せます。1イベント1ページとし、品質基準に届かないページは検索対象から外します。ランキングは、特典数・イベント数などの数えられる指標だけで並べ、広告費は並び順に使いません。</td></tr>
+      <tr><td>④ 基本機能の無料開放</td><td><span class="pill p-adopt">依頼どおり</span></td><td>施設はずっと無料です。代理店が自社案件を登録するときは、枠の押さえ込み（競合を締め出すための仮登録）を防ぐため、施設の確認を必須にします。</td></tr>
+      <tr><td>④ Powered by・広告枠</td><td><span class="pill p-cond">条件付き</span></td><td>代理店の共有ページ（代理店が自社の顧客に見せる提案ページ。通常のWeb）にだけ置きます。ミニアプリの中には置きません（2026年10月14日にミニアプリの広告ルールの改定が予定されているため）。</td></tr>
+      <tr><td>④ 有料プラン</td><td><span class="pill p-adopt">依頼どおり</span></td><td>ロゴ・広告の非表示に、分析・メンバー追加・外部連携を合わせたプランにします。価格はPhase 0のヒアリングで決めます。</td></tr>
+      <tr><td>⑤ 4権限のアクセス制御</td><td><span class="pill p-cond">条件付き（強化）</span></td><td>役割（ロール）だけでなく、「どの施設・どの会社のデータか」もあわせて判定します。一般ユーザーは、事業者側とは別系統のデータとして扱います。画面遷移も、入口・ロール・所属をサーバーで毎回確認して制御します（3章）。</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="n">1</span>課題と設計方針</h2>
+  <p class="sub">依頼に書かれた4つの課題それぞれに、打ち手を1対1で対応させています。</p>
+
+  <div class="pair">
+    <div><span class="lb">課題 1</span><p><strong>他代理店経由の案件が入力されず、空き枠に見えてしまう。</strong>施設は複数の代理店・媒体から依頼を受けています（ニフティ温泉は1,000店舗以上、HIDANEは500施設以上、サウナドは170施設以上と公表）。二重予約は実際に起こりうるリスクです。</p></div>
+    <div><span class="lb">打ち手</span><p>広告主名を伏せたまま「予約あり」を2タップで登録できるようにします。入力した内容は運営にも見せません。月に1回、LINEで「来月の予定は変わりありませんか」と確認し、1タップで答えられるようにして、情報の鮮度を保ちます。</p></div>
+  </div>
+  <div class="pair">
+    <div><span class="lb">課題 2</span><p><strong>ログインとアプリのインストールが離脱の原因になる。</strong>温浴施設チェーンの自社アプリには、App Storeの評価が1.9と低く、「クーポンが届かない」「パスコードが届かない」という声が目立つ例があります。</p></div>
+    <div><span class="lb">打ち手</span><p>施設と一般ユーザーは、LINEのメニューをタップするだけで開けるようにします。パスワードはありません。PCで業務をする代理店・運営には、会社で使いやすいログイン手段（メール・Google・Microsoft・SSO）を用意します。</p></div>
+  </div>
+  <div class="pair">
+    <div><span class="lb">課題 3</span><p><strong>一般ユーザー向けが、ただのイベント掲載サイトだと定着しない。</strong>サウナイキタイは月間約120万人が利用し、ニフティ温泉は月間の利用者数（UU）が約400万人です。ニフティ温泉（会員130万人）は、体験型広告に無償の事前告知（メルマガ・SNS・サイトTOP・LP。設置エリアに合わせて配信）を付けています。</p></div>
+    <div><span class="lb">打ち手</span><p>「今日、近くの施設で何がもらえるか・何を体験できるか」を、複数の代理店の案件を横断して見せます。追加した直後にすぐ使える特典を用意します（友だち追加のきっかけは「LINEスタンプ・クーポンが欲しかったから」が49.8%という調査があります）。配信は近くの新着に絞り、LINEの中だけで完結させます。</p></div>
+  </div>
+  <div class="pair">
+    <div><span class="lb">課題 4</span><p><strong>月額を高くすると使われず、囲い込みが生まれない。</strong>ロゴ非表示の相場は、国内で月1,250〜8,800円程度、海外で月10〜29ドルです。</p></div>
+    <div><span class="lb">打ち手</span><p>施設は常に無料、代理店も無料で使えるようにします。有料にするのは、共有ページの見た目（ロゴ・広告）と、分析・連携などの業務効率の部分だけです。収益の柱は、引き続きマッパが販売する枠のテイクレートです。</p></div>
+  </div>
+
+  <h3>設計の原則</h3>
+  <ol class="plain">
+    <li><strong>在庫の正しさを最優先にする。</strong>ブロック・予約・受入不可は同じ在庫表で数え、データベースの制約で二重予約を物理的に防ぎます（既存設計を継承）。</li>
+    <li><strong>見せる範囲はデータベースで決める。</strong>画面で隠すだけにはしません。ロールと所属は、行レベルセキュリティ（RLS）でリクエストごとに判定します。</li>
+    <li><strong>運営の業務画面から「見られない」ことを仕組みで担保する。</strong>マスキング詳細には、運営ロールの閲覧権限を最初から付けません。一般ユーザーの個人データは集計値で扱い、個別の閲覧は、運営管理者が問い合わせ対応で理由を入力した場合に限って記録付きで行います。データベースの管理者権限（管理画面・SQL・バックアップ）は限られた技術担当だけが持ち、そのアクセスもすべて記録します。</li>
+    <li><strong>外に出すのは許可を得た情報だけ。</strong>まとめサイト・共有ページ・LINE配信は、公開してよい項目だけを集めた「公開ビュー」からしか読めないようにします。</li>
+    <li><strong>施設の手間を増やさない。</strong>1画面1タスク、2タップ、取り消しはUndoで。既存の施設UIの考え方をLIFFでも守ります。</li>
+  </ol>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="n">2</span>全体システム構成</h2>
+  <p class="sub">アプリは1つです（既存設計と同じ Next.js ＋ Supabase）。そこに、利用者ごとに分かれた入口と認証を付けます。ここで決めているのは3点です。LINEとのつなぎ方、外部に公開する面の切り離し方、そして運営も含めて「見てはいけない行」を見せないための境界です。</p>
+<figure class="dg">
+<div class="dg-scroll">
+<svg viewBox="0 0 1090 520" role="img" aria-label="4種類の利用者は別々の入口と認証を通り、同じ業務APIと行レベルセキュリティを通ってデータに届く。外部に公開される面は、マスキング済みの公開ビューだけを読み取り専用で参照する。LINEとの連携は、IDトークン検証、Webhook、配信ワーカーからのプッシュ配信の3本。">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="dg-head"/>
+    </marker>
+  </defs>
+
+  <!-- 外部: LINE Platform -->
+  <rect x="16" y="96" width="134" height="226" rx="6" class="dg-ext"/>
+  <text x="83" y="120" class="dg-t dg-b" text-anchor="middle">LINE Platform</text>
+  <text x="83" y="150" class="dg-t dg-s" text-anchor="middle">LINE Login</text>
+  <text x="83" y="166" class="dg-t dg-s" text-anchor="middle">（IDトークン）</text>
+  <text x="83" y="206" class="dg-t dg-s" text-anchor="middle">Messaging API</text>
+  <text x="83" y="222" class="dg-t dg-s" text-anchor="middle">（プッシュ配信）</text>
+  <text x="83" y="262" class="dg-t dg-s" text-anchor="middle">Webhook</text>
+  <text x="83" y="278" class="dg-t dg-s" text-anchor="middle">（友だち追加・配信拒否）</text>
+
+  <!-- 配信ワーカー -->
+  <rect x="16" y="396" width="134" height="88" rx="6" class="dg-box"/>
+  <text x="83" y="428" class="dg-t dg-b" text-anchor="middle">配信ワーカー</text>
+  <text x="83" y="448" class="dg-t dg-s" text-anchor="middle">毎日の定時処理</text>
+  <text x="83" y="464" class="dg-t dg-s" text-anchor="middle">頻度上限・予算上限</text>
+
+  <!-- 行A: 利用者 -->
+  <g class="dg-row">
+    <rect x="250" y="16" width="152" height="48" rx="6" class="dg-user dg-c"/>
+    <text x="326" y="37" class="dg-t dg-b" text-anchor="middle">一般ユーザー</text>
+    <text x="326" y="54" class="dg-t dg-s" text-anchor="middle">LINEアプリ</text>
+    <rect x="418" y="16" width="152" height="48" rx="6" class="dg-user dg-f"/>
+    <text x="494" y="37" class="dg-t dg-b" text-anchor="middle">施設スタッフ</text>
+    <text x="494" y="54" class="dg-t dg-s" text-anchor="middle">LINEアプリ（スマホ）</text>
+    <rect x="586" y="16" width="152" height="48" rx="6" class="dg-user dg-a"/>
+    <text x="662" y="37" class="dg-t dg-b" text-anchor="middle">代理店・広告主</text>
+    <text x="662" y="54" class="dg-t dg-s" text-anchor="middle">PCブラウザ</text>
+    <rect x="754" y="16" width="152" height="48" rx="6" class="dg-user dg-o"/>
+    <text x="830" y="37" class="dg-t dg-b" text-anchor="middle">運営（マッパ）</text>
+    <text x="830" y="54" class="dg-t dg-s" text-anchor="middle">PCブラウザ</text>
+    <rect x="922" y="16" width="152" height="48" rx="6" class="dg-user"/>
+    <text x="998" y="37" class="dg-t dg-b" text-anchor="middle">代理店の顧客・検索者</text>
+    <text x="998" y="54" class="dg-t dg-s" text-anchor="middle">ブラウザ</text>
+  </g>
+
+  <!-- 行B: 入口 -->
+  <rect x="250" y="96" width="152" height="38" rx="6" class="dg-box"/>
+  <text x="326" y="120" class="dg-t" text-anchor="middle">ミニアプリ（一般向け）</text>
+  <rect x="418" y="96" width="152" height="38" rx="6" class="dg-box"/>
+  <text x="494" y="120" class="dg-t" text-anchor="middle">LIFF（施設向け）</text>
+  <rect x="586" y="96" width="152" height="38" rx="6" class="dg-box"/>
+  <text x="662" y="120" class="dg-t" text-anchor="middle">Web管理画面</text>
+  <rect x="754" y="96" width="152" height="38" rx="6" class="dg-box"/>
+  <text x="830" y="120" class="dg-t" text-anchor="middle">Web管理画面（運営）</text>
+  <rect x="922" y="96" width="152" height="38" rx="6" class="dg-box"/>
+  <text x="998" y="120" class="dg-t" text-anchor="middle">共有ページ・まとめサイト</text>
+
+  <!-- 行C: 認証 -->
+  <rect x="250" y="166" width="320" height="48" rx="6" class="dg-box"/>
+  <text x="410" y="187" class="dg-t dg-b" text-anchor="middle">LINEのIDトークンをサーバーで検証</text>
+  <text x="410" y="204" class="dg-t dg-s" text-anchor="middle">→ マッパ独自のセッションを発行</text>
+  <rect x="586" y="166" width="152" height="48" rx="6" class="dg-box"/>
+  <text x="662" y="187" class="dg-t" text-anchor="middle">メールリンク</text>
+  <text x="662" y="204" class="dg-t dg-s" text-anchor="middle">Google / Microsoft</text>
+  <rect x="754" y="166" width="152" height="48" rx="6" class="dg-box"/>
+  <text x="830" y="187" class="dg-t" text-anchor="middle">SSO ＋ 多要素認証</text>
+  <text x="830" y="204" class="dg-t dg-s" text-anchor="middle">IP制限（任意）</text>
+  <rect x="922" y="166" width="152" height="48" rx="6" class="dg-box"/>
+  <text x="998" y="187" class="dg-t" text-anchor="middle">署名付きURL</text>
+  <text x="998" y="204" class="dg-t dg-s" text-anchor="middle">または認証なし</text>
+
+  <!-- 行D: 業務API -->
+  <rect x="250" y="250" width="656" height="72" rx="6" class="dg-core"/>
+  <text x="578" y="280" class="dg-t dg-b" text-anchor="middle">業務API（Next.js ／ Vercel 東京リージョン）</text>
+  <text x="578" y="302" class="dg-t dg-s" text-anchor="middle">リクエストごとに「ロール × 所属（どの施設・どの組織か）」を確認する</text>
+
+  <!-- 行E: DB -->
+  <rect x="238" y="360" width="848" height="144" rx="8" class="dg-db"/>
+  <text x="252" y="382" class="dg-t dg-b">PostgreSQL（行レベルセキュリティで、見てよい行だけに絞る）</text>
+  <rect x="250" y="396" width="200" height="88" rx="6" class="dg-box"/>
+  <text x="350" y="424" class="dg-t dg-b" text-anchor="middle">業務データ</text>
+  <text x="350" y="444" class="dg-t dg-s" text-anchor="middle">施設・枠・在庫</text>
+  <text x="350" y="460" class="dg-t dg-s" text-anchor="middle">予約・ブロック</text>
+  <rect x="462" y="396" width="200" height="88" rx="6" class="dg-box dg-hl"/>
+  <text x="562" y="424" class="dg-t dg-b" text-anchor="middle">案件の詳細</text>
+  <text x="562" y="444" class="dg-t dg-s" text-anchor="middle">広告主名・商材名</text>
+  <text x="562" y="460" class="dg-t dg-s" text-anchor="middle">登録した組織と当該施設だけ</text>
+  <rect x="674" y="396" width="200" height="88" rx="6" class="dg-box"/>
+  <text x="774" y="424" class="dg-t dg-b" text-anchor="middle">一般ユーザー属性</text>
+  <text x="774" y="444" class="dg-t dg-s" text-anchor="middle">性別・年代・居住地</text>
+  <text x="774" y="460" class="dg-t dg-s" text-anchor="middle">本人と、集計値だけ</text>
+  <rect x="922" y="396" width="152" height="88" rx="6" class="dg-box dg-pub"/>
+  <text x="998" y="424" class="dg-t dg-b" text-anchor="middle">公開ビュー</text>
+  <text x="998" y="444" class="dg-t dg-s" text-anchor="middle">マスキング済みの空き</text>
+  <text x="998" y="460" class="dg-t dg-s" text-anchor="middle">公開承認済みイベント</text>
+
+  <!-- 矢印: 利用者 → 入口 -->
+  <line x1="326" y1="64" x2="326" y2="94" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="494" y1="64" x2="494" y2="94" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="662" y1="64" x2="662" y2="94" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="830" y1="64" x2="830" y2="94" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="998" y1="64" x2="998" y2="94" class="dg-ln" marker-end="url(#ah)"/>
+  <text x="332" y="84" class="dg-t dg-l">リッチメニューからワンタップ</text>
+  <!-- 入口 → 認証 -->
+  <line x1="326" y1="134" x2="326" y2="164" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="494" y1="134" x2="494" y2="164" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="662" y1="134" x2="662" y2="164" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="830" y1="134" x2="830" y2="164" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="998" y1="134" x2="998" y2="164" class="dg-ln" marker-end="url(#ah)"/>
+  <!-- 認証 → API -->
+  <line x1="410" y1="214" x2="410" y2="248" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="662" y1="214" x2="662" y2="248" class="dg-ln" marker-end="url(#ah)"/>
+  <line x1="830" y1="214" x2="830" y2="248" class="dg-ln" marker-end="url(#ah)"/>
+  <!-- API → DB -->
+  <line x1="578" y1="322" x2="578" y2="358" class="dg-ln" marker-end="url(#ah)"/>
+  <text x="586" y="345" class="dg-t dg-l">ログイン中のユーザーIDを付けて問い合わせる</text>
+  <!-- 公開面 → 公開ビュー（APIを通らない読み取り専用） -->
+  <line x1="998" y1="214" x2="998" y2="394" class="dg-ln dg-dash" marker-end="url(#ah)"/>
+  <rect x="954" y="268" width="88" height="40" rx="4" class="dg-tag"/>
+  <text x="998" y="285" class="dg-t dg-s" text-anchor="middle">読み取り専用</text>
+  <text x="998" y="300" class="dg-t dg-s" text-anchor="middle">の接続だけ</text>
+  <!-- LINE 連携 -->
+  <line x1="248" y1="190" x2="152" y2="190" class="dg-ln" marker-end="url(#ah)"/>
+  <text x="200" y="182" class="dg-t dg-l" text-anchor="middle">公開鍵を取得</text>
+  <line x1="152" y1="290" x2="248" y2="290" class="dg-ln" marker-end="url(#ah)"/>
+  <text x="200" y="282" class="dg-t dg-l" text-anchor="middle">イベント通知</text>
+  <line x1="236" y1="440" x2="152" y2="440" class="dg-ln" marker-end="url(#ah)"/>
+  <text x="194" y="432" class="dg-t dg-l" text-anchor="middle">配信対象</text>
+  <line x1="83" y1="394" x2="83" y2="324" class="dg-ln" marker-end="url(#ah)"/>
+  <text x="92" y="364" class="dg-t dg-l">プッシュ配信</text>
+</svg>
+</div>
+<figcaption>全体構成。依頼の4種類の利用者（と、ログインなしで見る代理店の顧客・検索者）は、入口と認証が別々で、そのあとは同じ業務APIとデータベースの行レベルセキュリティを通ります。社外に見える面（共有ページ・まとめサイト）は、マスキング済みの「公開ビュー」だけを読み取り専用の接続で読みます。</figcaption>
+</figure>
+
+  <h3>LINEのチャネル構成</h3>
+  <p>チャネルはすべて、<strong>マッパ運営法人が所有する1つのプロバイダー</strong>の下に作ります。同じプロバイダーの下なら、同じ人のLINEユーザーIDはどのチャネルでも同じ値になります。チャネルは後から別のプロバイダーへ移せないため、開発会社の名義では作りません。</p>
+  <div class="tw"><table>
+    <thead><tr><th>チャネル</th><th>種類</th><th>使いみち</th><th>補足</th></tr></thead>
+    <tbody>
+      <tr><td><span class="role r-usr">一般向け公式アカウント</span></td><td>Messaging API</td><td>友だち追加、リッチメニュー、特典・おすすめの配信</td><td>料金はスタンダードプラン。認証済アカウントを申請します（友だち全員のID取得や請求書払いに必要）</td></tr>
+      <tr><td><span class="role r-usr">一般向けミニアプリ</span></td><td>LINEミニアプリ</td><td>イベント・特典・施設・配信設定の画面</td><td>未認証のうちは審査なしで公開でき、あとから認証済みを申請します（審査1〜2週間）。友だち追加先は一般向け公式アカウントです</td></tr>
+      <tr><td><span class="role r-fac">施設向け公式アカウント</span></td><td>Messaging API</td><td>受注・着荷期限・月次確認の通知、施設メニュー</td><td>宛先が少ないのでライトプラン（月5,000通まで）から始めます</td></tr>
+      <tr><td><span class="role r-fac">施設向けログイン</span></td><td>LINEログイン＋LIFF</td><td>施設スタッフの画面。PCではQRコードでログイン</td><td>1チャネルにLIFFアプリを最大30件まで登録でき、審査はありません。公式アカウントとの連携（リンク）は施設向けの1つだけにします</td></tr>
+      <tr><td><span class="role r-agc">代理店・広告主の任意ログイン</span></td><td>LINEログイン</td><td>LINEでログインしたい中小の代理店向け（Phase 2以降・任意）</td><td>公式アカウントとは連携しません（施設向けの友だち追加を出さないため）</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small"><strong>運営（全体管理者）はLINEを使いません。</strong>返金・決済・緊急閲覧を扱うため、会社アカウントのSSO＋多要素認証でログインするWeb画面に限ります。運営あての衝突アラートや期限切れ間近の通知は、管理画面とメールで受け取ります。</p>
+  <div class="note info">
+    <span class="lb">2つの公式アカウントの間のルール</span>
+    <p>LINEのユーザーIDは同じでも、公式アカウントAPI利用規約（第5条）により、一方のアカウントで得た利用者情報をもう一方で使うことはできません（LINEヤフー社が許可した場合を除く）。そのため、一般ユーザーのデータ（<code>consumers</code>）と事業者側のユーザー（<code>users</code>）は別のテーブルで持ち、紐付けもしません。施設スタッフが一般ユーザーとして友だち追加した場合も、別人として扱います。Webhookの処理でも、どの公式アカウントからの通知かで参照してよいテーブルを固定します（一般向けは <code>consumers</code>、施設向けは <code>users</code> だけ）。</p>
+  </div>
+
+  <h3>構成要素と役割</h3>
+  <div class="tw"><table>
+    <thead><tr><th>要素</th><th>役割</th><th>技術（既存設計から継承／追加）</th></tr></thead>
+    <tbody>
+      <tr><td>業務アプリ（Web・LIFF・ミニアプリ）</td><td>全員の画面とAPI。利用者の種類ごとに入口を分ける</td><td>Next.js（App Router）／Vercel 東京 <span class="dim">継承</span></td></tr>
+      <tr><td>データベース</td><td>在庫・予約・ブロック・一般ユーザー。全テーブルでRLSを強制する</td><td>Supabase（PostgreSQL・東京）＋ Drizzle <span class="dim">継承</span></td></tr>
+      <tr><td>認証の橋渡し</td><td>LINEのIDトークンをサーバーで検証し、マッパ独自のセッションを発行する</td><td>自前実装＋Supabaseのユーザー対応付け <span class="dim">追加</span></td></tr>
+      <tr><td>配信ワーカー</td><td>定時・新着時の配信、頻度上限、予算上限、再送制御</td><td>Vercel Cron ＋ キュー、Messaging API <span class="dim">追加</span></td></tr>
+      <tr><td>Webhook受信</td><td>友だち追加・配信拒否（ブロック）の同期、署名の検証</td><td>API Route <span class="dim">追加</span></td></tr>
+      <tr><td>まとめサイト</td><td>公開許可済みのイベント・施設・特典を一般向けに掲載する</td><td>別ドメイン・静的生成（ISR）。読み取り専用の接続で公開ビューだけを読む <span class="dim">追加</span></td></tr>
+      <tr><td>共有ページ</td><td>代理店が顧客に見せる提案。Powered by Mappa と広告枠を表示する</td><td>署名付きURL・noindex <span class="dim">追加</span></td></tr>
+      <tr><td>課金</td><td>マッパ販売の決済（既存）と、有料プランの月額課金</td><td>Stripe Checkout <span class="dim">継承</span> ／ Stripe Billing <span class="dim">追加</span></td></tr>
+      <tr><td>メール・監視</td><td>通知メール、エラー監視、利用分析</td><td>Resend・Sentry・PostHog <span class="dim">継承</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>LINEからのログインの流れ</h3>
+  <p>クライアント（LINEの画面）から送られてくるユーザーIDやプロフィールは、そのまま信用しません（LINE公式ドキュメントでも禁止されています）。サーバーが受け取るのは<strong>IDトークンだけ</strong>です。それをLINEの公開鍵で検証してから、マッパ側の利用者と権限を引きます。</p>
+<pre class="mermaid">
+sequenceDiagram
+  participant U as 施設スタッフ（LINEアプリ）
+  participant L as LIFF画面
+  participant S as マッパ サーバー
+  participant P as LINE Platform
+  participant D as データベース
+  U->>L: 施設メニューをタップ
+  L->>L: liff.init と liff.getIDToken
+  L->>S: IDトークンを送る
+  S->>P: 署名を確かめる公開鍵を取得（キャッシュする）
+  P-->>S: 公開鍵
+  S->>S: 署名・発行者・チャネルID・有効期限を検証し、ユーザーID（sub）を得る
+  S->>D: ログイン手段の表から利用者を特定し、所属と権限を確認
+  S-->>L: セッションCookie（HttpOnly・12時間）
+  L->>S: 以降の操作（Cookie付き）
+  S->>D: ユーザーIDを付けて問い合わせ（RLSが行を絞る）
+</pre>
+  <ul class="plain small">
+    <li>LINEのIDトークンは1時間で使えなくなるため、ログインのときに一度だけ検証し、その後はマッパ独自のセッションで本人を確認します。検証は、LINEが公開している公開鍵を使ってサーバー内で行います（LINEの検証APIを使う方法もありますが、回数の上限が公開されていないため、配信直後に大勢が一斉に開く一般向けでは使いません）。</li>
+    <li>どのチャネルのトークンかで入口を固定します。一般向けミニアプリのトークンでは、施設用のAPIには入れません。</li>
+    <li>LIFFを開くたびに裏で自動ログインできるので、セッションは短めにしても利用者の手間は増えません。</li>
+  </ul>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="n">3</span>権限とセキュリティ</h2>
+  <p class="sub">依頼の4権限は、実際には「役割（ロール）」と「どの施設・どの会社のデータか（所属）」の組み合わせで判定しないと守れません。たとえば施設スタッフでも、他の施設のデータは見えてはいけないからです。ロール名は既存設計（R-25）の6種をそのまま使い、一般ユーザーと共有ページの閲覧者を別系統として加えます。</p>
+
+  <h3>ロールの定義</h3>
+  <div class="tw"><table>
+    <thead><tr><th>依頼の4権限</th><th>ロール</th><th>範囲</th><th>主な使い方</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="2"><span class="role r-ops">全体管理者</span></td><td><code>ops_admin</code></td><td>全施設（詳細は除く）</td><td>審査・返金・配信・プラン・監査。多要素認証が必須</td></tr>
+      <tr><td><code>ops_staff</code></td><td>全施設（詳細は除く）</td><td>代行入力・問い合わせ対応。返金は10万円以下まで（超える場合は運営管理者の承認）、配信は運営管理者の承認が必要</td></tr>
+      <tr><td rowspan="2"><span class="role r-fac">施設スタッフ</span></td><td><code>fac_admin</code></td><td>自社の施設（担当店舗で絞り込み可）</td><td>スタッフの招待と解除、特典の作成、支払明細の確認</td></tr>
+      <tr><td><code>fac_staff</code></td><td>担当する施設</td><td>ブロックの登録、申請の確認、着荷・報告、クーポンの消し込み</td></tr>
+      <tr><td rowspan="2"><span class="role r-agc">広告主・代理店</span></td><td><code>adv_admin</code></td><td>自社の組織</td><td>メンバー・プラン・決済・公開許可。組織の種類は「代理店」か「広告主」</td></tr>
+      <tr><td><code>adv_staff</code></td><td>自社の組織</td><td>空き確認・提案・申請。決済は金額上限つき</td></tr>
+      <tr><td><span class="role r-usr">一般ユーザー</span></td><td><code>consumer</code>（別系統）</td><td>本人のデータだけ</td><td>特典・お気に入り・配信設定。事業者側のデータには一切触れない</td></tr>
+      <tr><td class="dim">（追加）</td><td>共有ページ閲覧者</td><td>リンクで共有された範囲だけ</td><td>代理店の顧客。ログインなし・読み取りのみ</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>権限マトリクス</h3>
+  <p class="small"><span class="yes">○</span> できる　<span class="part">△</span> 条件付き　<span class="no">—</span> できない。「空き状況」の※は、次の「公開レベル」に従った表示です。</p>
+  <div class="tw"><table class="min">
+    <thead><tr><th>操作</th><th class="c">運営<br>管理者</th><th class="c">運営<br>一般スタッフ</th><th class="c">施設<br>管理者</th><th class="c">施設<br>一般スタッフ</th><th class="c">代理店・広告主<br>管理者</th><th class="c">代理店・広告主<br>メンバー</th><th class="c">一般<br>ユーザー</th><th class="c">共有ページ<br>閲覧者</th></tr></thead>
+    <tbody>
+      <tr><td>施設・枠マスタの編集</td><td class="c yes">○</td><td class="c yes">○</td><td class="c part">△ 申請</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>空き状況の閲覧</td><td class="c yes">○※</td><td class="c yes">○※</td><td class="c yes">○ 自施設は全部</td><td class="c yes">○ 自施設は全部</td><td class="c yes">○※</td><td class="c yes">○※</td><td class="c no">—</td><td class="c part">△ 共有範囲</td></tr>
+      <tr><td>他社案件ブロックの登録</td><td class="c part">△ 代行（詳細なし）</td><td class="c part">△ 代行（詳細なし）</td><td class="c yes">○</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>自社案件ブロックの登録・申請</td><td class="c yes">○ マッパの案件（即時確定）</td><td class="c yes">○ マッパの案件（即時確定）</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○ 申請（施設の承認で確定）</td><td class="c yes">○ 申請（施設の承認で確定）</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>ブロック申請の確認（承認・却下）</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>ブロック詳細（広告主名・商材）の閲覧</td><td class="c part">△ ブレークグラス（緊急時だけの限定閲覧）のみ</td><td class="c no">—</td><td class="c yes">○ 自施設</td><td class="c yes">○ 自施設</td><td class="c yes">○ 自社登録分</td><td class="c yes">○ 自社登録分</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>マッパ販売枠の予約・決済</td><td class="c yes">○ 代行</td><td class="c yes">○ 代行</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○</td><td class="c part">△ 金額上限</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>返金の実行</td><td class="c yes">○</td><td class="c part">△ 10万円以下</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>提案・共有ページの作成</td><td class="c yes">○</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>公開イベントの掲載申請</td><td class="c yes">○</td><td class="c yes">○</td><td class="c yes">○ 自施設</td><td class="c yes">○ 自施設</td><td class="c yes">○ 自社案件</td><td class="c yes">○ 自社案件</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>公開イベント・特典の審査</td><td class="c yes">○</td><td class="c part">△ 一次確認</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>特典の作成</td><td class="c yes">○</td><td class="c yes">○</td><td class="c yes">○ 自施設</td><td class="c no">—</td><td class="c yes">○ 協賛分</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>特典の店頭消し込み</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c part">△ 画面を見せる</td><td class="c no">—</td></tr>
+      <tr><td>LINE配信の作成・送信</td><td class="c yes">○</td><td class="c part">△ 承認が必要</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>一般ユーザーの個人データ</td><td class="c part">△ 問い合わせ時のみ・記録</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○ 本人のみ</td><td class="c no">—</td></tr>
+      <tr><td>統計レポート（集計値のみ）</td><td class="c yes">○</td><td class="c yes">○</td><td class="c yes">○ 自施設</td><td class="c yes">○ 自施設</td><td class="c yes">○ 自社案件</td><td class="c yes">○ 自社案件</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>プラン・請求の管理</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+      <tr><td>監査ログの閲覧</td><td class="c yes">○</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c part">△ 自社データへのアクセス記録</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="disclosure">公開レベル（マスキングの段階）</h3>
+  <p>ブロックを登録するときに、登録者が公開レベルを選びます。依頼にある「マスキングフラグ」にあたるものです。既定は「予約ありのみ」です。既存設計（R-19）の「未来の出稿計画は競合に見せない」を初期値として守り、それより多く見せるのは登録者が選んだ場合だけです。</p>
+  <div class="tw"><table>
+    <thead><tr><th>公開レベル</th><th>他の代理店・広告主に見える内容</th><th>使う場面</th><th>競合カテゴリの排他</th></tr></thead>
+    <tbody>
+      <tr><td><strong>公開</strong></td><td>施設・期間・広告主名・商材</td><td>広告主が告知したい案件。まとめサイト・LINEにも載せられる（別途、公開許可が必要）。選べるのは、代理店・広告主が自社案件として申請したブロックだけ</td><td>事前に分かる</td></tr>
+      <tr><td><strong>カテゴリ</strong></td><td>「スキンケア：予約あり」と期間</td><td>同じカテゴリの提案を最初から避けてほしい案件</td><td>事前に分かる</td></tr>
+      <tr><td><strong>予約ありのみ</strong> <span class="pill p-info">既定</span></td><td>「予約あり」と期間（実施中でもカテゴリは出さない）</td><td>通常の他社案件</td><td>システムが裏で判定。断るときは「この期間は受入条件により予約できません」とだけ返す</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain small">
+    <li><strong>休館・工事などは公開レベルではなく「受入不可」で登録します。</strong>施設の都合で枠そのものを止める日は、ブロックではなく既存の受入不可（台数の上書き）で登録し、他社には「受入不可」とだけ表示します。</li>
+    <li><strong>「予約不可」の表示について。</strong>依頼にある「予約不可」は、予約・ブロック・受入不可によってある日の枠が全台埋まったときの表示として使います。1台ぶんのブロックなら、残りの台数は空きとして見えるので「予約あり」と表示します。</li>
+    <li><strong>施設が入力する他社案件では「公開」を選べません。</strong>広告主の了解なく、社名が他社に出ないようにするためです。</li>
+    <li><strong>推測を防ぐ。</strong>期間は「予約あり」として見えているので、同じ期間にカテゴリを変えて申し込めば、断られたカテゴリからブロックのカテゴリを推測できてしまいます。そこで、カテゴリの排他で断った回数を「組織×施設×月」で数え、上限（例：月3回）を超えたら、その施設への申込を止めて運営に通知します。この上限は、代理店の申請とマッパ販売の仮押さえの両方にかけます。空き状況APIにも回数制限をかけ、登録画面には「カテゴリを付けると、他社の申込の結果から推測されることがあります」と表示します。</li>
+  </ul>
+
+  <h3>中立性の担保（無料開放の前提）</h3>
+  <p>マッパの運営は、他の代理店から見ると競合です。無料で使ってもらい、他社案件を入力してもらうには、「運営の業務画面から見られない」ことを仕組みとして約束する必要があります。</p>
+  <ul class="plain">
+    <li><strong>詳細は別テーブルに置く。</strong>広告主名・商材名・メモは <code>block_private_details</code> にだけ保存します。このテーブルを読めるのは、登録した組織と当該施設のメンバーだけです。運営ロールには閲覧権限を付けません（既存設計の「運営は全件閲覧」を改めます）。</li>
+    <li><strong>ブロック本体も運営は公開レベルどおりにしか読めない。</strong>ブロックの行そのもの（どの代理店の、何のカテゴリの案件か）も、運営は他の事業者と同じく、公開レベルに従った列だけを返すビュー経由で読みます（運営自身が所有するブロックを除く）。排他の判定はデータベースの制約と登録用の関数が行うので、行を読む権限は要りません。</li>
+    <li><strong>CS閲覧（利用者として画面を見る機能）でも詳細は出さない。</strong>既存設計にある運営のCS閲覧は、運営ロールのままRLSを通して表示する形に改め、詳細と一般ユーザーのデータは返しません。</li>
+    <li><strong>RLSを通らない接続（サービスロール）の用途を限る。</strong>Webhook・定期処理・配信ワーカーなど、人の操作ではない処理にだけ使い、その処理でも詳細のテーブルは読みません。既存設計でサービスロールを使っていた「運営の集計」は、運営ロールのまま集計ビューを読む形に改めます。</li>
+    <li><strong>データベースの管理者権限を絞る。</strong>管理画面・SQL・バックアップに触れられるのは限られた技術担当だけにし、そのアクセスはすべて記録して定期的に確認します。約束するのは「運営の業務画面と運営ロールからは見えない」ことで、その範囲を利用規約にも正確に書きます。</li>
+    <li><strong>ブレークグラス（緊急時の閲覧）は三重に制限する。</strong>トラブル対応でどうしても必要な場合だけ、当該施設の同意と、別の運営管理者の承認を得て、24時間に限って閲覧できます。すべて記録し、登録した組織にも通知します。</li>
+    <li><strong>代行入力では詳細を持たない。</strong>施設から電話で頼まれて運営が代行入力する場合、詳細欄は作りません。</li>
+    <li><strong>規約に明記する。</strong>他社が入力したデータを、マッパの営業活動に使わないことを利用規約に書きます。</li>
+    <li><strong>データを持ち帰れるようにする。</strong>代理店は、自社データのCSV出力と削除依頼がいつでもできます。</li>
+  </ul>
+
+  <h3>認証とセッション</h3>
+  <div class="tw"><table>
+    <thead><tr><th>利用者</th><th>ログイン手段</th><th>セッション</th><th>追加の保護</th></tr></thead>
+    <tbody>
+      <tr><td><span class="role r-usr">一般ユーザー</span></td><td>LINEミニアプリ（自動）</td><td class="n">24時間</td><td>切れていれば、開いたときに自動で再ログインします。退会するとデータを削除します</td></tr>
+      <tr><td><span class="role r-fac">施設スタッフ</span></td><td>LIFF（自動）。PCではLINEログインのQRコード。LINEを使わない人はメールのワンタイムコード</td><td class="n">12時間</td><td>招待コードで施設に紐付けます。退職時は管理者がすぐ解除できます。90日使っていないスタッフは自動で停止します</td></tr>
+      <tr><td><span class="role r-agc">代理店・広告主</span></td><td>メールリンク／Google／Microsoft（LINEは任意）</td><td class="n">12時間</td><td>30日まで自動で延長します。管理者には多要素認証を推奨し、有料プランでは必須にできます</td></tr>
+      <tr><td><span class="role r-ops">運営</span></td><td>会社アカウントのSSO＋多要素認証（必須）</td><td class="n">8時間</td><td>返金・データ出力・ブレークグラスの直前には再認証（5分以内）を求めます。IP制限は任意です</td></tr>
+      <tr><td class="dim">共有ページ閲覧者</td><td>署名付きURL（ログインなし）</td><td class="n">—</td><td>期限（既定30日）・取り消し・閲覧記録を付け、検索エンジンには載せません（noindex）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>画面遷移の制御</h3>
+  <ul class="plain">
+    <li><strong>入口ごとに画面を分ける。</strong>施設LIFF・一般向けミニアプリ・代理店と広告主のWeb・運営のWeb・共有ページで、画面（URL）のまとまりを分けます。画面を返す前に、サーバーが毎回、セッションの入口・ロール・所属を確認します。メニューを隠すだけの制御にはしません。</li>
+    <li><strong>許可されていない画面は開かせない。</strong>URLを直接入力して許可外の画面を開いた場合は、その入口のトップ（未ログインならログイン画面）に戻し、記録を残します。他の施設や組織のデータのURLには「見つかりません」と表示し、そのデータがあるかどうかも分からないようにします。</li>
+    <li><strong>通知から開いたときも権限を確かめ直す。</strong>LINE通知やメールのリンクから開いた場合も、ログインしたあとに移動先の権限をあらためて確認します。権限がなければ、その入口のトップに戻します。</li>
+    <li><strong>所属の切り替え。</strong>複数の施設や組織に所属している人は、画面上部で所属を切り替えます。切り替えるたびに権限を引き直します。</li>
+    <li><strong>「戻る」で前の画面を見せない。</strong>業務画面はブラウザに保存させません（Cache-Control: no-store）。ログアウトやセッション切れのあとに「戻る」を押しても、前の画面の内容は表示されません。</li>
+    <li><strong>時間の範囲もサーバーで絞る。</strong>代理店・広告主の画面では、他社の設置状況は今日時点のものしか返しません（R-19）。プロトタイプの設置マップのように、未来の日付を選んで他社の予定を見られる動きは、本番では作りません。</li>
+  </ul>
+
+  <h3>セキュリティ対策の一覧</h3>
+  <div class="tw"><table>
+    <thead><tr><th>分類</th><th>対策</th></tr></thead>
+    <tbody>
+      <tr><td>認証</td><td>LINEのIDトークンは、サーバーでLINEの公開鍵を使って署名を検証し、発行者・チャネルID・有効期限を確認します。クライアントが送るユーザーIDは使いません。セッションはランダム値をハッシュで保存し、Cookieは HttpOnly・Secure・SameSite=Lax にします。状態を変える操作にはCSRF対策をかけます。</td></tr>
+      <tr><td>認可</td><td>全テーブルでRLSを強制します（既存設計を継承）。所属は毎回データベースから引き、トークンには入れません（退職時にすぐ失効させるため）。在庫の数値は専用の関数からしか書き換えられません。</td></tr>
+      <tr><td>LINE連携</td><td>Webhookは署名（X-Line-Signature）を検証します。LINEは送信元IPを公開していないので、IP制限は使いません。配信には再送キー（X-Line-Retry-Key）を必ず付け、二重送信を防ぎます。</td></tr>
+      <tr><td>個人データ</td><td>一般ユーザーのデータは別の系統で持ちます。広告主には、10人未満の区分を出さない統計だけを渡します。退会したら30日以内に削除し、配信ログは13か月で消します。現在地は保存せず、URLにも入れません（アクセスログや分析ツールに残さないため）。16歳未満と答えた人は属性を保存せず、配信と統計の対象にしません。</td></tr>
+      <tr><td>配信</td><td>メッセージのリンクは送る直前に検査します。送る内容全体からURLを取り出し、マッパが管理するドメインだけかを確認します。自動の新着のお知らせや応答メッセージも、同じ検査を通します。任意のURLへ転送するページは作りません。</td></tr>
+      <tr><td>公開面</td><td>まとめサイトは読み取り専用の接続を使い、読めるのは公開ビューだけです。共有ページはnoindexにし、トークンはハッシュで保存します。空き状況APIとクーポン抽選には回数制限をかけます（スクレイピングと不正対策）。</td></tr>
+      <tr><td>運用</td><td>閲覧の記録は、マスキング詳細・個人データ・データ出力のすべてについて残します。チャネルシークレットなどは秘密情報の保管庫で管理します。外部の脆弱性診断は、代理店に開放する前（権限・マスキング・共有ページ）と、一般ユーザー向けの公開前の2回受けます。詳細と一般ユーザーのデータは、監査ログには列名と行IDだけを残し、値は残しません。分析ツール（PostHog）の画面録画は施設LIFFとミニアプリでは使わず、エラー監視（Sentry）にはリクエストの本文・Cookie・画面の状態を送りません。</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="n">4</span>利用者ごとの機能とUI方針</h2>
+  <p class="sub">「フェーズ」は、その機能を作る段階です（<a href="#s7">7章</a>）。P1＝施設のスケジュール基盤、P2＝代理店への開放とマッパ販売、P3＝一般ユーザー向け、P4＝収益化。</p>
+
+  <h3><span class="role r-ops">① 全体管理者（運営）</span></h3>
+  <p class="small">PCの業務画面（1440px）。プロトタイプの業務システム風のUIを引き継ぎます。</p>
+  <div class="tw"><table class="min">
+    <thead><tr><th>機能</th><th>内容</th><th>フェーズ</th></tr></thead>
+    <tbody>
+      <tr><td>施設・枠マスタ</td><td>施設の登録と審査、枠（館内ゾーン・台数・カテゴリ）、緯度経度。CSVでも取り込めます</td><td>P1</td></tr>
+      <tr><td>一括代行入力</td><td>マッパ販売を通さずに決まったマッパ自身の案件を、ブロックとしてまとめて登録します（所有者はマッパ）。施設から頼まれた代行は、詳細なしで登録します</td><td>P1</td></tr>
+      <tr><td>在庫の横断ビュー</td><td>全施設の空き・予約あり・受入不可を一覧します。他社案件は公開レベルに従って表示し、詳細や中身（どの代理店の、何のカテゴリか）は表示しません。鮮度（最後に施設が確認した日）も表示します</td><td>P1</td></tr>
+      <tr><td>衝突アラート</td><td>容量オーバーになりかけた登録、確認待ちが期限切れ間近の申請、60日確認のない施設を知らせます</td><td>P1</td></tr>
+      <tr><td>組織・ユーザー管理</td><td>代理店・広告主の審査、施設スタッフの状態、停止処理</td><td>P1〜P2</td></tr>
+      <tr><td>マッパ販売の予約管理</td><td>代行予約、キャンセル・返金、発送と着荷、施設への支払（既存設計を継承）</td><td>P2</td></tr>
+      <tr><td>公開の審査</td><td>イベントと特典の掲載審査です。PR表記、化粧品・健康食品の表現、酒類の条件、景品規制の区分と上限を確認します</td><td>P3</td></tr>
+      <tr><td>配信管理</td><td>セグメント、配信予約、推定通数と費用、月の予算上限、配信拒否（ブロック）率の推移</td><td>P3</td></tr>
+      <tr><td>まとめサイト管理</td><td>掲載・非掲載、品質基準の判定、編集コメント、許可を取り消されたページの即時撤去</td><td>P3</td></tr>
+      <tr><td>プラン・広告枠</td><td>有料プランの状態、共有ページとまとめサイトの広告枠</td><td>P4</td></tr>
+      <tr><td>監査・ブレークグラス</td><td>閲覧・変更の記録、緊急閲覧の申請と承認</td><td>P1</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain small">
+    <li>要対応（衝突・期限切れ間近・未確認の施設）を常に画面上部に出します。</li>
+    <li>返金や配信など取り消せない操作は、確認画面と、必要に応じて二人目の承認を通します。</li>
+    <li>マスキングされた行には「詳細は登録者のみ閲覧可」と表示します。運営の画面にも、詳細の欄そのものを出しません。</li>
+  </ul>
+
+  <h3><span class="role r-fac">② 施設スタッフ</span></h3>
+  <p class="small">施設向け公式アカウントのメニューから開くLIFF（スマホ）。PCでは同じ画面をブラウザで開き、LINEのQRコードでログインします。</p>
+  <div class="tw"><table class="min">
+    <thead><tr><th>機能</th><th>内容</th><th>フェーズ</th></tr></thead>
+    <tbody>
+      <tr><td>今日のタスク</td><td>確認待ちの申請、着荷の受け取り、実施報告、特典の消し込み件数を一覧します</td><td>P1〜P2</td></tr>
+      <tr><td>スケジュール</td><td>枠×日のカレンダーです。休館・工事などの受入不可（既存の台数の上書き）は2タップで登録でき、Undoで取り消せます</td><td>P1</td></tr>
+      <tr><td>他社案件の登録（マスキング入力）</td><td>種類（他社案件／イベント予定あり）を選び、枠・期間・台数を入れると登録できます。任意でカテゴリ、公開レベル（「カテゴリ」か「予約ありのみ」。既定は予約ありのみ）、自施設だけが見られるメモも付けられます</td><td>P1</td></tr>
+      <tr><td>月1回の予定確認</td><td>LINEに「来月の予定は変わりありませんか」が届き、1タップで確認完了です。変更があればそのままスケジュールを開きます</td><td>P1</td></tr>
+      <tr><td>代理店からの申請の確認</td><td>代理店が申請した、その代理店自身の案件のブロックを承認・却下します。72時間応答がなければ申請は失効します</td><td>P2</td></tr>
+      <tr><td>着荷・実施報告</td><td>マッパ販売案件の受け取りと、配布数の報告です（既存設計を継承）</td><td>P2</td></tr>
+      <tr><td>自施設イベントの掲載申請</td><td>熱波イベントなど、施設が自ら行うイベントをまとめサイトとLINEに載せるよう申請します</td><td>P3</td></tr>
+      <tr><td>特典の作成と消し込み</td><td>閑散時間帯の割引などの特典を作ります。店頭では、客が見せる画面のQRコードを読み取って「使用済み」にします</td><td>P3</td></tr>
+      <tr><td>スタッフ管理（管理者）</td><td>招待コードの発行、退職者の解除、担当店舗の設定</td><td>P1</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain small">
+    <li>1画面に1つのタスク、タップ領域は44px以上、本文は16px以上。既存設計の目標（月次メンテ一式を90秒・10タップ以内）を引き継ぎます。</li>
+    <li>他社案件の登録は、種類を選んだあと、枠・期間・台数の3項目だけで完了します。カテゴリやメモは「詳しく入力」を開いたときだけ表示します。</li>
+    <li>予約が入っている日を受入不可にしようとすると、止めて「運営に相談」へ誘導します（既存の R-17 を継承）。</li>
+  </ul>
+
+  <h3><span class="role r-agc">③ 広告主・代理店</span></h3>
+  <p class="small">PCのWeb画面です。共有ページだけは、顧客がスマホで見ることを前提にします。</p>
+  <div class="tw"><table class="min">
+    <thead><tr><th>機能</th><th>内容</th><th>フェーズ</th></tr></thead>
+    <tbody>
+      <tr><td>空き検索</td><td>エリア・期間・枠タイプ・客層で検索します。他社案件は公開レベルに応じて「予約あり」などと表示します。情報の鮮度も表示します</td><td>P2</td></tr>
+      <tr><td>施設詳細</td><td>客層・実績・館内ゾーン。今日時点で設置中のマッパ販売分は、カテゴリと終了日だけ表示します（既存 R-19）。他社案件のブロックは登録者が選んだ公開レベルに従います（既定の「予約ありのみ」ではカテゴリを出さず、「予約あり」と期間だけ）</td><td>P2</td></tr>
+      <tr><td>提案・共有ページ</td><td>施設と日程を選び、顧客向けの提案ページを作ります。期限・取り消し・閲覧記録つきです。Powered by Mappa と広告枠の場所が入ります（有料プランで非表示にできるのは P4 から）</td><td>P2</td></tr>
+      <tr><td>自社案件のブロック申請</td><td>マッパ販売を通さずに自社（代理店）で決めた案件を、ブロックとして登録申請します。施設が承認すると確定します（無料）</td><td>P2</td></tr>
+      <tr><td>マッパ販売枠の予約・決済</td><td>30分の仮押さえ、カード決済、請求書（既存設計を継承）</td><td>P2</td></tr>
+      <tr><td>案件の進み具合</td><td>発送・着荷・実施報告、統計レポート（集計値のみ）</td><td>P2〜P3</td></tr>
+      <tr><td>公開の許可</td><td>自社案件をまとめサイトやLINEで紹介してよいかを、案件ごとに設定します。いつでも取り消せます</td><td>P3</td></tr>
+      <tr><td>メンバー・プラン</td><td>招待、権限、有料プランへの切り替え、請求書</td><td>P2〜P4</td></tr>
+      <tr><td>有料機能</td><td>ロゴ・広告の非表示、自社ロゴ、共有ページの閲覧分析、CSV・カレンダー連携、実績レポート</td><td>P4</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain small">
+    <li>自社の情報と他社の情報は、色と「自社」ラベルで常に区別します。取り違えは信頼を失う事故につながるためです。</li>
+    <li>共有ページには、顧客に見せてよい項目だけを出します。自社の内部メモや他社のブロック理由は出しません。</li>
+  </ul>
+
+  <h3><span class="role r-usr">④ 一般ユーザー（LINEミニアプリ）</span></h3>
+  <p class="small">一般向け公式アカウントのリッチメニューから開きます。ミニアプリは全画面表示です。2025年10月からはスマホのブラウザでも開けるので、まとめサイトから来た人も同じ画面を使えます。</p>
+  <div class="tw"><table class="min">
+    <thead><tr><th>機能</th><th>内容</th><th>フェーズ</th></tr></thead>
+    <tbody>
+      <tr><td>はじめての登録</td><td>友だち追加 → 利用目的への同意 → 3問アンケート（性別・年代・住まいのエリア）→ よく行くエリア（任意・最大3つ）→ すぐ使える特典。1分以内で終わる設計にします</td><td>P3</td></tr>
+      <tr><td>今日・今週のおすすめ</td><td>登録エリア・お気に入り・性別・年代から、使える特典・開催中のイベントを出します。リッチメニューからは応答メッセージ（無料）でも受け取れます</td><td>P3</td></tr>
+      <tr><td>イベント・サンプリング一覧</td><td>公開許可済みのものだけを表示します。広告主が費用を出したものには「PR」を付けます</td><td>P3</td></tr>
+      <tr><td>施設ページ</td><td>基本情報・アクセス・特典・イベント。お気に入りに登録できます</td><td>P3</td></tr>
+      <tr><td>特典・クーポン</td><td>受け取り、抽選、店頭で見せる画面（QRコードと時間で変わるコード付き）。受け取れるのは、一般向け公式アカウントを友だち追加した人だけです（一覧や概要はまとめサイトでも見られます）</td><td>P3</td></tr>
+      <tr><td>現在地から探す</td><td>その場だけ位置情報を使います。現在地は保存せず、URLにも入れません</td><td>P3</td></tr>
+      <tr><td>配信設定</td><td>頻度（週1回＋新着〈既定〉／新着のみ／毎日／停止）、時刻、エリア</td><td>P3</td></tr>
+      <tr><td>データと退会</td><td>同意内容の確認、アンケートの修正、退会（データを削除）</td><td>P3</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain small">
+    <li>特典までは最短3タップ。1ページに1つの目的だけを置きます。</li>
+    <li>酒類の情報は、アンケートで20歳以上と答えた人にだけ出します。入浴・サウナの直前や最中の飲酒を勧める表現は使いません（酒類の広告・宣伝に関する自主基準）。飲酒してからの入浴を勧める表現も使いません（厚生労働省「健康に配慮した飲酒に関するガイドライン」）。</li>
+    <li>16歳未満と答えた人は、属性を保存せず、配信と統計の対象にしません。令和8年改正の個人情報保護法（公布済み・施行は公布から2年以内）に合わせて扱いを見直します。</li>
+    <li>LINEで送るメッセージのリンク先は、マッパが管理するページ（ミニアプリ・まとめサイト）だけにします。施設サイトや広告主のLPへは、そこから移動してもらいます（公式アカウントAPI利用規約 第5条3項）。</li>
+  </ul>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="n">5</span>主要な仕組みの詳細</h2>
+
+  <h3 id="s5-1">5.1 マスキング入力と二重予約の防止</h3>
+  <p>既存設計の「受入不可・台数変更」は、台数を<strong>上書き</strong>する仕組みでした。他社案件をこれで表そうとすると、施設が「3台のうち2台埋まっているから1」と計算して入力することになり、間違いが起きます。v2では他社案件を<strong>在庫を1台ぶん使うブロック</strong>として登録します。使っている台数はシステムが足し上げ、残りの空きを自動で計算します。プロトタイプの他社ブロック（台数を足し上げ、カテゴリの排他にも加わる）が、このモデルの動く原型です。</p>
+  <figure class="dg">
+    <div class="dg-scroll">
+    <svg viewBox="0 0 860 250" role="img" aria-label="既存の仕組みでは、施設が同時受入数を3から1に書き換えるため、計算と入力のし直しが必要で、カテゴリも分からない。v2では、他社案件を2件ブロックとして登録するだけで、残り1台が自動で空きになり、飲料カテゴリの同時設置も自動で断る。">
+      <text x="20" y="28" class="dg-t dg-b">既存：受入不可で台数を上書きする</text>
+      <text x="20" y="48" class="dg-t dg-s">男性脱衣所ラックA（同時受入 3台）</text>
+      <rect x="20" y="62" width="110" height="54" rx="5" class="dg-ext"/>
+      <text x="75" y="94" class="dg-t dg-s" text-anchor="middle">減らした</text>
+      <rect x="140" y="62" width="110" height="54" rx="5" class="dg-ext"/>
+      <text x="195" y="94" class="dg-t dg-s" text-anchor="middle">減らした</text>
+      <rect x="260" y="62" width="110" height="54" rx="5" class="dg-box"/>
+      <text x="315" y="94" class="dg-t" text-anchor="middle">空き</text>
+      <text x="20" y="146" class="dg-t dg-s">施設が「3台のうち2台は他社」と計算し、台数を「1」に書き換える。</text>
+      <text x="20" y="166" class="dg-t dg-s">他社案件が早く終わっても、入力し直すまで空きに戻らない。</text>
+      <text x="20" y="186" class="dg-t dg-s">何のカテゴリか分からないため、競合の同時設置を防げない。</text>
+
+      <line x1="425" y1="20" x2="425" y2="230" class="dg-ln dg-dash"/>
+
+      <text x="460" y="28" class="dg-t dg-b">v2：他社案件をブロックとして登録する</text>
+      <text x="460" y="48" class="dg-t dg-s">男性脱衣所ラックA（同時受入 3台）</text>
+      <rect x="460" y="62" width="110" height="54" rx="5" class="dg-box dg-hl"/>
+      <text x="515" y="86" class="dg-t" text-anchor="middle">予約あり</text>
+      <text x="515" y="104" class="dg-t dg-s" text-anchor="middle">飲料・〜10/12</text>
+      <rect x="580" y="62" width="110" height="54" rx="5" class="dg-box dg-hl"/>
+      <text x="635" y="86" class="dg-t" text-anchor="middle">予約あり</text>
+      <text x="635" y="104" class="dg-t dg-s" text-anchor="middle">〜10/26</text>
+      <rect x="700" y="62" width="110" height="54" rx="5" class="dg-box dg-pub"/>
+      <text x="755" y="94" class="dg-t" text-anchor="middle">空き</text>
+      <text x="460" y="146" class="dg-t dg-s">施設は「枠・期間・台数」を2件入れるだけ。残りの台数は自動で計算。</text>
+      <text x="460" y="166" class="dg-t dg-s">10/12を過ぎると、1台ぶんが自動で空きに戻る。</text>
+      <text x="460" y="186" class="dg-t dg-s">カテゴリ（飲料）を付ければ、他社の飲料の申込は自動で断る。</text>
+      <text x="460" y="206" class="dg-t dg-s">他の代理店に見えるのは「予約あり」と期間だけ。</text>
+    </svg>
+    </div>
+    <figcaption>同じ「3台中2台が埋まっている」状態を、既存の受入不可で表した場合と、v2のブロックで表した場合の比較。</figcaption>
+  </figure>
+
+  <h4>登録の経路と状態</h4>
+  <div class="tw"><table>
+    <thead><tr><th>経路</th><th>誰が</th><th>状態の流れ</th><th>在庫への反映</th></tr></thead>
+    <tbody>
+      <tr><td>施設の入力</td><td><span class="role r-fac">施設</span></td><td>登録した時点で確定</td><td>すぐ使う</td></tr>
+      <tr><td>運営の自社案件（マッパ販売を通さないもの）</td><td><span class="role r-ops">運営</span></td><td>登録した時点で確定（一括入力できる）</td><td>すぐ使う</td></tr>
+      <tr><td>代理店の申請</td><td><span class="role r-agc">代理店</span></td><td>申請中 → 施設が承認すれば確定／却下／72時間で失効</td><td>申請中から仮に使う（押さえ込み対策として、1組織あたりの同時申請数に上限を設ける）</td></tr>
+      <tr><td>マッパ販売</td><td><span class="role r-agc">広告主</span></td><td>仮押さえ30分 → 決済で確定（既存設計どおり即時確定）</td><td>仮押さえから使う</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">代理店の申請を施設の確認制にするのは、既存設計の重要決定4（施設に承認させない）の例外です。代金がマッパを通らない無料チャネルでは、施設の意思確認がないまま人気の枠が埋まると、枠の押さえ込み（競合を締め出すための仮登録）を防げないためです。</p>
+
+  <h4>守るルール</h4>
+  <ul class="plain">
+    <li>同時受入数を超える登録は、データベースの制約で拒否します（既存の在庫表と同じ仕組み）。</li>
+    <li>予約やブロックが入っている日は、受入不可（台数の上書き）を設定できません（既存 R-17）。</li>
+    <li>「イベント予定あり」も、催事スペースなど選んだ枠の在庫を台数ぶん使います。施設全体を止めたい日は受入不可で登録します。</li>
+    <li>過去の日付のブロックを登録・修正できるのは施設だけです（実績の補正用）。</li>
+    <li>カテゴリは、運営が決めたカテゴリ一覧から選びます（<code>category_master</code>。自由入力はできません）。表記ゆれ（「化粧品」と「コスメ」など）で排他がすり抜けるのを防ぐためです（既存 §7-1(3) の未設計課題を解消）。</li>
+    <li>鮮度：毎月1回、施設向けLINEで「来月の予定は変わりありませんか」と確認します。60日確認のない施設は、検索結果に「情報が古い可能性があります」と表示します。</li>
+  </ul>
+
+  <h3 id="s5-2">5.2 LINE配信（毎日17時の代わりに）</h3>
+  <p>依頼にある「毎日17時の自動配信」は、仕組みとしてはすぐ作れます。ただし費用と配信拒否（ブロック）の両面から、既定値を変えることを提案します。</p>
+  <div class="tw"><table>
+    <thead><tr><th>友だち数</th><th>配信頻度</th><th class="n">月の通数</th><th class="n">月額（税別）</th></tr></thead>
+    <tbody>
+      <tr><td class="n">5,000人</td><td>週1回</td><td class="n">約21,500通</td><td class="n">15,000円</td></tr>
+      <tr><td class="n">10,000人</td><td>週1回</td><td class="n">約43,000通</td><td class="n">約54,000円</td></tr>
+      <tr><td class="n">10,000人</td><td>週2回</td><td class="n">約86,000通</td><td class="n">約183,000円</td></tr>
+      <tr><td class="n">10,000人</td><td><strong>毎日</strong></td><td class="n">300,000通</td><td class="n"><strong>約790,000円</strong></td></tr>
+      <tr><td class="n">30,000人</td><td>週1回</td><td class="n">約129,000通</td><td class="n">約312,000円</td></tr>
+      <tr><td class="n">30,000人</td><td><strong>毎日</strong></td><td class="n">900,000通</td><td class="n"><strong>約2,290,000円</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">2026年10月1日からの料金で計算。スタンダードプラン月15,000円（30,000通まで含む）に、追加分は月20万通まで1通3円、それを超える分は1通2.5円。配信を拒否（ブロック）している友だちは通数に含まれないため、実際はその分だけ下がります。</p>
+  <p>さらに、LINE公式アカウントの配信を拒否（ブロック）したことがある人は約7割にのぼり、理由の1位は「配信の頻度が多すぎる」（26.5%）です。好まれる頻度は「週1回程度」が最も多いという調査もあります。提案する既定（週1回＋新着のお知らせ）なら、友だち1万人で月約5.4万円、新着が全員に週2回届いた場合でも最大約31万円です。</p>
+
+  <h4>提案する配信の形</h4>
+  <div class="tw"><table>
+    <thead><tr><th>種類</th><th>いつ</th><th>誰に</th></tr></thead>
+    <tbody>
+      <tr><td>週のおすすめ <span class="pill p-info">既定</span></td><td>毎週金曜 17時（依頼の時刻を既定にし、20〜21時とA/Bテスト）</td><td>全員。内容はエリア・お気に入り・性別・年代で出し分け（下の「おすすめの選び方」）</td></tr>
+      <tr><td>新着のお知らせ</td><td>お気に入り施設や登録エリアで、新しい特典・イベントが始まった日の17時</td><td>該当する人だけ。1人あたり週2回まで（既定の設定に含む）</td></tr>
+      <tr><td>毎日のおすすめ</td><td>毎日 17時</td><td>配信設定で「毎日」を選んだ人だけ</td></tr>
+      <tr><td>その場で受け取る</td><td>いつでも</td><td>リッチメニューの「今日のおすすめ」をタップした人に、応答メッセージで返す（通数に数えないので無料）</td></tr>
+    </tbody>
+  </table></div>
+  <h4>配信の仕組み</h4>
+  <ul class="plain">
+    <li><strong>おすすめの選び方。</strong>候補の特典・イベントに点数を付け、上位3件を出します。点数の基準は、登録エリアと住まいのエリアに合うこと、お気に入りの施設であること、今日から使えるか開催中であること、新しさ、そして特典やイベントに指定された対象の属性（性別・年代）に合うことです。酒類は20歳以上と答えた人にだけ出します。該当する特典やイベントがない人には、その回は送りません（通数と費用を抑えるため）。特典やイベントのない施設そのものの紹介（おすすめサウナ）は配信には入れず、ミニアプリの「今日・今週のおすすめ」画面で、エリア内の施設として出します。</li>
+    <li><strong>対象は自前のデータで絞る。</strong>LINE側の属性配信（ナローキャスト）は、推定の属性で、ターゲットが100人以上必要など制約が多いため使いません。アンケートの属性をもとに自前で対象を決め、マルチキャスト（1回500人まで・毎秒200回まで）で送ります。</li>
+    <li><strong>二重送信を防ぐ。</strong>配信の単位ごとに再送キー（X-Line-Retry-Key）を先に発行して保存し、サーバーエラーのときだけ間隔を空けて再送します。</li>
+    <li><strong>予算の上限を持つ。</strong>配信前に通数と費用を見積もり、その月の予算を超える配信は止めて運営に確認を求めます。</li>
+    <li><strong>配信拒否率を見る。</strong>友だち追加・配信拒否（ブロック）の通知をデータベースに反映し、配信の種類ごとに配信拒否率とクリック率を記録します。配信拒否率が上がった配信の種類は、頻度を自動で下げます。</li>
+    <li><strong>リンクは送る直前に検査する。</strong>送る内容全体からURLを取り出し、マッパが管理するドメインだけかを確認します。自動の新着のお知らせや応答メッセージも同じ検査を通します。</li>
+    <li><strong>位置情報は常時取らない。</strong>LINEには位置を常に取得するAPIがありません。配信は住まいとよく行くエリアで絞り、現在地はミニアプリを開いたときにだけ使います。</li>
+  </ul>
+
+  <h3 id="s5-3">5.3 特典・クーポンと景品表示法</h3>
+  <p>特典の種類によって、景品表示法の扱いが変わります。登録画面で種類の選択を必須にし、上限額はシステムが計算します。</p>
+  <div class="tw"><table>
+    <thead><tr><th>特典の種類</th><th>例</th><th>景品表示法の扱い</th><th>システムでの制御</th></tr></thead>
+    <tbody>
+      <tr><td><strong>全員に配る割引</strong> <span class="pill p-adopt">主力</span></td><td>平日昼の入館料200円引き</td><td>値引き。取引通念上妥当な範囲なら景品規制の対象外</td><td>通常の審査のみ</td></tr>
+      <tr><td>全員に配る物品</td><td>ドリンク1杯無料</td><td>総付景品。上限は取引価額の20%（1,000円未満なら200円）</td><td>取引価額を入力させ、上限を自動チェック</td></tr>
+      <tr><td>抽選の割引・物品</td><td>抽選で入館料半額</td><td>一般懸賞。1本あたりの最高額は取引価額の20倍（5,000円以上なら10万円）、総額は売上予定総額の2%まで</td><td>取引価額と売上予定総額から、最高額と当選数の上限を自動計算。％割引は割引上限額の入力が必須。法務の承認が必須</td></tr>
+      <tr><td>来館不要の抽選</td><td>友だち追加だけで応募でき、景品もデジタルで受け取れる企画</td><td>オープン懸賞（上限なし）。ただし、応募条件か受け取り条件に来館（館内QRの読み取り・チェックインを含む）が入る場合や、館内の告知などで来館者を主な対象にする場合は、取引に付随する懸賞（一般懸賞）として扱う</td><td>応募条件・受け取り方法・告知先を入力させ、どれかに来館が関わるものは一般懸賞として上限を自動計算。景品が入館料の割引券など来館して使うものなら、一般懸賞として上限を計算し、法務の承認を必須にする（取引に付随するかは消費者庁のQ&amp;Aでも明示されていないため）</td></tr>
+      <tr><td>試供品</td><td>広告主のサンプルを受付で配る</td><td>見本。適当な限度であれば総付規制の対象外</td><td>広告主の案件と紐付ける</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain small">
+    <li>来館者を対象にした懸賞の取引価額は原則100円（最高額2,000円）です。その施設の通常の最低取引価額が100円を超える場合は、その額を取引価額にできます。</li>
+    <li>同じ施設・同じ期間の懸賞は合算して判定されます。そのため、施設×期間で景品額を集計し、上限に近づいたら警告します。</li>
+    <li>費用の出どころは特典ごとに記録します。施設の無償協賛（サウナイキタイの有料会員向け特典と同じ型）、閑散時間帯の提供（FLEXKEYと同じ型）、広告主の負担（サンプル）、マッパの負担（友だち獲得）の4つです。</li>
+    <li>店頭で見せる画面には、クーポンごとのQRコード（受取番号入り）と、60秒ごとに変わる6桁のコードを表示します。スタッフは施設のLIFFでQRコードを読み取り（読めないときは受取番号とコードを手入力し）、「使用済み」にします。照合はその1件のクーポンに対してだけ行います。失敗が続いたら（例：5回）そのスタッフの消し込みを一時停止して記録し、協賛やマッパが負担する特典は、施設ごとの1日の消し込み数が急に増えたら運営に通知します。スクリーンショットの使い回しと、他人のクーポンの消し込みを防ぐためです。酒類の特典は、消し込み画面で「年齢を確認した」のチェックを必須にします。</li>
+    <li>オリジナルグッズは、v2では店頭での受け取りに限ります（全員配布なら総付景品、抽選なら一般懸賞として上限を計算）。郵送は住所の取得と管理が必要になるため、後のフェーズで検討します。</li>
+    <li>特典を受け取れるのは、一般向け公式アカウントを友だち追加した人だけです。一覧や概要はまとめサイトでも見られますが、受け取りはミニアプリで行います（依頼の「LINE登録者限定」）。</li>
+    <li><strong>サウナサブスク連携：</strong>おふろパス（ニフティ）、FLEXKEY、サウナタイムパスなど主なサウナ・温浴サブスクには、外部向けの公開APIが見当たりません（2026年9月時点）。v2では、どのサブスクの提携施設かと、サブスク会員向けの特典（会員画面を見せれば使える特典など）を、運営が手動またはCSVで登録します。会員資格の自動確認などのAPI連携は、各社との提携がまとまってから後のフェーズで検討します。LINEのメッセージには、サブスク事業者のページへのリンクを直接入れません（公式アカウントAPI利用規約 第5条3項）。サブスク会員限定の特典が景品表示法のどの区分に当たるかは、Phase 0 の法務確認に含めます。</li>
+    <li>LINEのクーポン機能（2025年8月からAPIで作成・送信できるようになり、抽選にも対応）は、友だち追加直後の特典など単純なものに使います。店頭での消し込みや上限管理が必要なものは、ミニアプリの中に自前で作ります。</li>
+  </ul>
+
+  <h3 id="s5-4">5.4 まとめサイト（SEO）</h3>
+  <p>一般向けのまとめサイトは、事業者向けのマッパとは<strong>別のドメイン・別のブランド</strong>にします。既存の事業者向けサイトは「一般向けポータルと誤解されない」ように作っているので、混ぜないためです。</p>
+  <div class="tw"><table>
+    <thead><tr><th>ページの種類</th><th>中身</th><th>検索エンジンの扱い</th></tr></thead>
+    <tbody>
+      <tr><td>エリア×今週</td><td>そのエリアで今週使える特典と開催中のイベント。編集者が一言コメントを添える</td><td>index（中心にするページ）</td></tr>
+      <tr><td>施設</td><td>基本情報、アクセス、写真、特典、イベント</td><td>情報量の基準を満たすものだけ index</td></tr>
+      <tr><td>イベント</td><td>1イベント1ページ。開催条件、配布物、PR表記</td><td>開催中は index。終了後は「終了」と表示し、次回や関連イベントへの導線を置いて、一定期間後に noindex</td></tr>
+      <tr><td>ランキング</td><td>エリアごとに、今週使える特典の数・開催中のイベント数・お気に入り登録数など、数えられる指標だけで並べる。並べ方の基準と集計期間を必ず表示する。広告費は並び順に使わず、「No.1」「人気1位」などの言葉も使わない</td><td>index</td></tr>
+      <tr><td>特集</td><td>編集者が書く月次の記事</td><td>index</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain">
+    <li><strong>載せる条件：</strong>広告主と施設の両方が公開を許可し、運営の審査を通ったものだけ。許可が取り消されたら、数分以内にすべてのページから消します。酒類のイベントは、年齢を確認する画面を設けるまで、まとめサイトには載せません。</li>
+    <li><strong>作らないページ：</strong>都市名やキーワードを入れ替えただけのページを大量に作ることはしません。Googleのスパムポリシー（大量生成コンテンツの不正使用・誘導ページ）に当たるためです。本文をAIで大量に自動生成することもしません。</li>
+    <li><strong>PR表記：</strong>広告主が費用を出した案件には、一覧カード・詳細ページ・LINEメッセージの冒頭に「PR」と広告主名を自動で入れます（ステルスマーケティング規制）。ランキングは数えられる指標だけで並べ、広告費は並び順に使いません。根拠のない「No.1」表示もしません（消費者庁「No.1表示に関する実態調査報告書」2024年9月）。</li>
+    <li><strong>構造化データ：</strong>Event の構造化データは付けますが、日本はイベント検索のリッチリザルトの対象外です（2026年9月時点）。効果は当てにしません。クーポンや割引そのものはイベントとしてマークアップしません。</li>
+    <li><strong>外部送信の公表：</strong>解析タグや広告タグを入れる場合は、電気通信事業法の外部送信規律に沿って、送信先・送る情報・目的を公表するページを置きます。</li>
+    <li><strong>LINEへの導線：</strong>まとめサイトから一般向け公式アカウントの友だち追加と、ミニアプリへ誘導します。</li>
+  </ul>
+
+  <h3 id="s5-5">5.5 無料開放と収益化</h3>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>無料</th><th>プロ（仮）</th><th>ビジネス（仮）</th></tr></thead>
+    <tbody>
+      <tr><td>対象</td><td>すべての代理店・広告主</td><td>提案をよく作る代理店</td><td>複数ブランド・大手</td></tr>
+      <tr><td>月額（税別）</td><td class="n">0円</td><td>5,000〜10,000円の帯で検証</td><td>個別見積</td></tr>
+      <tr><td>空き検索・施設詳細・自社案件の申請</td><td class="c yes">○</td><td class="c yes">○</td><td class="c yes">○</td></tr>
+      <tr><td>共有ページ</td><td>○（Powered by Mappa・広告枠あり）</td><td>○（非表示・自社ロゴ）</td><td>○（非表示・自社ロゴ）</td></tr>
+      <tr><td>共有ページの閲覧分析</td><td class="c no">—</td><td class="c yes">○</td><td class="c yes">○</td></tr>
+      <tr><td>メンバー数</td><td>3人まで</td><td>10人まで</td><td>上限なし</td></tr>
+      <tr><td>CSV・カレンダー連携</td><td class="c no">—</td><td class="c yes">○</td><td class="c yes">○</td></tr>
+      <tr><td>API</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">○</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">施設は全機能をずっと無料で使えます。参考として、ロゴ・広告を消せる最低価格は、formrun が月2,980円（年契約・税抜）、RESERVA が月6,600円（年払い・税込。広告は消えるが、小さな©表記は残る）、Calendly が1席月10ドル（年払い）です。価格はPhase 0で代理店にヒアリングして決めます。</p>
+
+  <h4>広告枠と Powered by のルール</h4>
+  <ul class="plain">
+    <li><strong>置く場所：</strong>無料プランの共有ページと、まとめサイト。ミニアプリの中には置きません。2026年10月14日に予定されているミニアプリポリシーの改定で、使える広告ネットワークが原則として「LINEヤフー広告ネットワーク」に限られ、自社広告や直接契約の広告のルールも整理される予定です。改定後の条文を確認するまでは置きません。</li>
+    <li><strong>共有ページに出さない広告：</strong>マッパの販売広告と、他の代理店の広告。共有ページを見るのは代理店の顧客なので、そこにマッパの営業が出ると中立性が壊れ、代理店に使ってもらえなくなります。まとめサイトは一般ユーザー向けなので、事業者向けの広告は出しません。</li>
+    <li><strong>出す広告：</strong>温浴施設の告知、業界向けサービス（什器・物流など）、マッパの無料登録の案内。</li>
+    <li><strong>リンクの扱い：</strong>Powered by Mappa のリンクには <code>rel="sponsored nofollow"</code> を付けます。共有ページは noindex にします。リンクの設置を規約で義務づけることもしません（Googleは、属性を付ける選択を認めないままリンク設置を義務づけることを、リンクスパムの例に挙げています）。</li>
+  </ul>
+
+  <h4>収益の柱</h4>
+  <ol class="plain">
+    <li><strong>マッパ販売枠のテイクレート</strong>（既存設計、既定30%）…これまでどおり主軸です。</li>
+    <li><strong>代理店向け有料プラン</strong>…共有ページの見た目と業務効率化の機能にだけ課金します。</li>
+    <li><strong>広告枠</strong>…共有ページとまとめサイト。</li>
+    <li><strong>事前告知の付加価値</strong>…公開を許可した案件は、まとめサイトとLINEで事前告知します。これをマッパ販売の標準メニューに含めます（ニフティ温泉も体験型広告に無償の事前告知を付けています）。LINE配信枠を単独で売るかどうかは、LINEヤフー社への確認の結果を見てから決めます。</li>
+  </ol>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="n">6</span>データモデル</h2>
+  <p class="sub">既存設計の44テーブルを土台にします。在庫の中心（<code>inventory_days</code>・二重予約を防ぐ CHECK 制約・排他の EXCLUDE 制約・在庫を専用関数でしか書けない RLS）は変えません。そのうえで、ブロック、一般ユーザー、配信、公開、課金の各テーブルを足します。事業者側と一般ユーザー側は、参照の経路も含めて系統を分けます。</p>
+
+  <h3>事業者側（施設・在庫・代理店）</h3>
+<pre class="mermaid">
+erDiagram
+  organizations ||--o{ memberships : "所属"
+  users ||--o{ memberships : "所属"
+  users ||--o{ auth_identities : "ログイン手段"
+  organizations ||--o{ facilities : "運営"
+  facilities ||--o{ slot_products : "枠"
+  slot_products ||--o{ inventory_days : "日次在庫"
+  slot_products ||--o{ external_blocks : "ブロック"
+  external_blocks ||--o| block_private_details : "詳細"
+  organizations ||--o{ external_blocks : "所有"
+  category_master ||--o{ external_blocks : "カテゴリ"
+  slot_products ||--o{ bookings : "マッパ販売"
+  organizations ||--o{ bookings : "広告主"
+  external_blocks ||--o{ exclusivity_locks : "排他"
+  bookings ||--o{ exclusivity_locks : "排他"
+  facilities ||--o{ schedule_checks : "月次確認"
+  organizations ||--o{ share_links : "提案"
+  organizations ||--o| subscriptions : "プラン"
+</pre>
+  <h3>一般ユーザー側（LINE・公開・特典・配信）</h3>
+<pre class="mermaid">
+erDiagram
+  consumers ||--|| consumer_profiles : "属性"
+  consumers ||--o{ consumer_consents : "同意"
+  consumers ||--o{ line_friendships : "友だち状態"
+  line_channels ||--o{ line_friendships : "チャネル"
+  facilities ||--o{ public_events : "開催"
+  bookings ||--o| public_events : "公開許可"
+  facilities ||--o{ offers : "特典"
+  offers ||--o{ coupon_grants : "配布・当選"
+  consumers ||--o{ coupon_grants : "受け取り"
+  segments ||--o{ push_campaigns : "対象"
+  push_campaigns ||--o{ push_deliveries : "送信"
+  consumers ||--o{ push_deliveries : "受信"
+  public_events ||--o| seo_pages : "掲載"
+  consumers ||--o{ consumer_favorites : "お気に入り"
+  facilities ||--o{ consumer_favorites : "施設"
+</pre>
+  <p class="small">一般ユーザー（<code>consumers</code>）と事業者側のユーザー（<code>users</code>）の間には関連を作りません。同じ人でも別のレコードとして扱います（LINE公式アカウントAPI利用規約：利用者情報は公式アカウントごとに管理する）。</p>
+
+  <h3>既存設計からの変更点</h3>
+  <div class="tw"><table>
+    <thead><tr><th>対象</th><th>既存設計</th><th>v2</th></tr></thead>
+    <tbody>
+      <tr><td>ログイン</td><td>Supabase Auth（施設はメールOTP、広告主はパスワード、運営はパスワード＋TOTP）</td><td><code>auth_identities</code> で LINE・メール・Google・Microsoft・SSO を1人に複数紐付け。セッションはマッパ独自</td></tr>
+      <tr><td>組織の種類</td><td><code>org_type</code>＋<code>is_agency</code></td><td><code>org_type</code> に <code>agency</code> を追加し、<code>plan_code</code> を持たせる</td></tr>
+      <tr><td>他社案件</td><td>表す場所がない（受入不可の理由に「他社案件」もない）</td><td><code>external_blocks</code>（使う台数を在庫に足し上げる）＋<code>block_private_details</code>（詳細・運営は閲覧不可）</td></tr>
+      <tr><td>競合排他</td><td><code>booking_exclusivity_locks</code>（予約だけが対象）</td><td><code>exclusivity_locks</code> に一般化し、予約かブロックのどちらか一方を持つ</td></tr>
+      <tr><td>カテゴリ</td><td>自由記述の配列（表記ゆれで排他がすり抜ける）</td><td>運営が決めたカテゴリ一覧（<code>category_master</code>）を参照</td></tr>
+      <tr><td>館内ゾーン</td><td>項目がない（プロトタイプは枠名から推定）</td><td><code>slot_products.zone_code</code>（7区分）を正式な項目にする</td></tr>
+      <tr><td>運営の閲覧範囲</td><td>運営は全件を閲覧できる（<code>app.is_ops()</code> で全件バイパス）</td><td>ブロックの詳細（<code>block_private_details</code>）は全件バイパスの対象外。ブロック本体（<code>external_blocks</code>・<code>exclusivity_locks</code>）も、運営は他の事業者と同じく <code>v_availability</code> 経由で、公開レベルに従った列だけを読む（運営自身が所有するブロックを除く）。一般ユーザーのデータは集計ビューのみで、個別の閲覧は運営管理者が問い合わせ対応時に理由を入力して行い、記録する。詳細が必要な緊急時はブレークグラス</td></tr>
+      <tr><td>CS閲覧（view-as）</td><td>対象組織のデータを、利用者本人として閲覧できる（記録あり）</td><td>運営ロールのままRLSを通して表示する。ブロックの詳細と一般ユーザーのデータは返さず、「詳細は登録者のみ閲覧可」と表示する</td></tr>
+      <tr><td>サービスロール（RLSを通らない接続）</td><td>Webhook・定期処理・移行に加え、運営の集計にも使う</td><td>人の操作ではない処理（Webhook・定期処理・配信ワーカー）に限る。その処理でも詳細のテーブルは読まない。運営の集計は、運営ロールのまま集計ビューを読む</td></tr>
+      <tr><td>通知の手段</td><td>DB上はアプリ内・メール・SMS（画面設計では施設通知をLINE主としていたが、Phase 2〜3に先送りされ、DBと整合していなかった）</td><td>LINE（施設向け・一般向け）を正式な通知手段にする</td></tr>
+      <tr><td>一般ユーザー</td><td>スコープ外</td><td><code>consumers</code> 系を別系統で新設</td></tr>
+      <tr><td>収益</td><td>テイクレートのみ（都度決済）</td><td><code>plans</code>・<code>subscriptions</code>・<code>share_links</code>・広告枠を追加</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>引き継ぐテーブル</h3>
+  <p class="small">次のテーブルは既存のMVP設計書（§4 データベース設計）の定義をそのまま使い、列だけを足します。</p>
+  <div class="tw"><table>
+    <thead><tr><th>テーブル</th><th>役割</th><th>v2で足す・変える列</th></tr></thead>
+    <tbody>
+      <tr><td><code>facilities</code></td><td>施設（店舗）。住所・営業時間・受入の余裕日数・テイクレート・緯度経度</td><td><code>lat</code>・<code>lng</code> を全施設で必須にする（位置によるおすすめのため）。<code>partner_program_codes</code>（text[]：提携しているサブスク。運営が手動・CSVで登録）</td></tr>
+      <tr><td><code>slot_products</code></td><td>枠（例：男性脱衣所ラックA）。枠タイプ・同時受入数・価格・リードタイム</td><td><code>zone_code</code>（館内ゾーン7区分）、排他カテゴリは <code>category_master</code> を参照</td></tr>
+      <tr><td><code>inventory_days</code></td><td>枠×日の在庫。二重予約を防ぐ CHECK 制約</td><td>変更なし。ブロックの台数も専用の関数からここに加える</td></tr>
+      <tr><td><code>availability_overrides</code></td><td>受入不可・台数の上書き（休館・工事など）</td><td>変更なし（他社案件はここに入れない）</td></tr>
+      <tr><td><code>bookings</code> / <code>orders</code></td><td>マッパ販売の予約と決済</td><td>変更なし。公開の許可は <code>public_events</code> 側で持つ</td></tr>
+      <tr><td><code>memberships</code></td><td>閲覧権限の中心。組織×ユーザー×ロール。<code>facility_scope</code>（uuid[]）で担当店舗を絞る</td><td>ロール名は R-25 の6種に統一。状態に removed を足し、退職時は即時に失効させる</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>主なテーブル定義（新規・変更分）</h3>
+  <p class="small">クリックで列の一覧を開けます。既存設計の命名規則（uuid・<code>daterange</code>・金額は整数円の税抜・列挙値は text＋CHECK）に従います。</p>
+
+  <details class="tbl"><summary><span class="tn">auth_identities</span><span class="td">ログイン手段（1人に複数）</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>id</td><td>uuid</td><td>主キー</td></tr>
+      <tr><td>user_id</td><td>uuid</td><td>事業者側のユーザー（<code>users</code>）</td></tr>
+      <tr><td>provider</td><td>text</td><td>line / email / google / microsoft / sso</td></tr>
+      <tr><td>subject</td><td>text</td><td>LINEならユーザーID（U＋32桁）。(provider, subject) で一意</td></tr>
+      <tr><td>line_channel_kind</td><td>text</td><td>LINEの場合、どの入口で作られたか（facility_login / advertiser_login）</td></tr>
+      <tr><td>email</td><td>citext</td><td>メール系の場合</td></tr>
+      <tr><td>created_at / last_used_at</td><td>timestamptz</td><td>使われていない手段の棚卸しに使う</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">sessions</span><span class="td">マッパ独自のセッション</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>id_hash</td><td>bytea</td><td>セッションIDのハッシュ（生の値は保存しない）</td></tr>
+      <tr><td>subject_type / subject_id</td><td>text / uuid</td><td>user か consumer か、と、そのID</td></tr>
+      <tr><td>entry</td><td>text</td><td>liff_facility / miniapp_consumer / web_business / web_ops</td></tr>
+      <tr><td>expires_at / step_up_at</td><td>timestamptz</td><td>有効期限と、直近の多要素認証の時刻（運営の再認証用）</td></tr>
+      <tr><td>ip_hash / ua_hash</td><td>bytea</td><td>不審なログインの調査用</td></tr>
+      <tr><td>revoked_at</td><td>timestamptz</td><td>退職・停止時にすぐ失効させる</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">category_master</span><span class="td">商材カテゴリの一覧（運営が管理）</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>code</td><td>text</td><td>主キー（例：skincare、beverage）</td></tr>
+      <tr><td>label / parent_code</td><td>text</td><td>表示名と親カテゴリ</td></tr>
+      <tr><td>is_alcohol</td><td>boolean</td><td>酒類。20歳以上の確認が必要な表示の判定に使う</td></tr>
+      <tr><td>is_active</td><td>boolean</td><td>廃止したカテゴリは選べなくする</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">external_blocks</span><span class="td">他社案件などのブロック（マスキング入力）</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>id</td><td>uuid</td><td>主キー</td></tr>
+      <tr><td>facility_id / slot_product_id</td><td>uuid</td><td>枠は必須。「イベント予定あり」も、催事スペースなど使う枠を選んで登録する</td></tr>
+      <tr><td>period / day_part</td><td>daterange / text</td><td>期間と時間帯</td></tr>
+      <tr><td>qty</td><td>int</td><td>在庫を何台ぶん使うか（既定1）</td></tr>
+      <tr><td>category_code</td><td>text</td><td>任意。入れると競合排他に参加する</td></tr>
+      <tr><td>source</td><td>text</td><td>facility_entry（施設の入力）/ agency_request（代理店の申請）/ ops_entry（運営の自社案件）</td></tr>
+      <tr><td>owner_org_id</td><td>uuid</td><td>詳細を所有する組織</td></tr>
+      <tr><td>disclosure</td><td>text</td><td>public / category / busy_only（既定 busy_only）。依頼の「マスキングフラグ」にあたる。public を選べるのは代理店・広告主の申請（agency_request）だけ</td></tr>
+      <tr><td>public_label</td><td>text</td><td>公開レベルが public のときだけ、表示用の広告主名・商材名を入れる（登録者が確認した文面）。<code>v_availability</code> はこの列を返し、<code>block_private_details</code> は参照しない</td></tr>
+      <tr><td>status</td><td>text</td><td>requested / confirmed / rejected / expired / cancelled</td></tr>
+      <tr><td>request_expires_at</td><td>timestamptz</td><td>代理店の申請の期限（既定72時間）</td></tr>
+      <tr><td>confirmed_by / confirmed_at</td><td>uuid / timestamptz</td><td>施設が承認した人と時刻</td></tr>
+      <tr><td>display_label</td><td>text</td><td>予約あり / イベント予定あり</td></tr>
+      <tr><td>created_by / created_at / updated_at</td><td></td><td>監査用</td></tr>
+    </tbody></table>
+    <p class="small" style="padding:0 16px 12px">在庫への反映は専用の関数からだけ行います。requested と confirmed の qty を <code>inventory_days</code> の使用数に加え、同時受入数を超える場合は拒否します。</p></div></details>
+
+  <details class="tbl"><summary><span class="tn">block_private_details</span><span class="td">ブロックの詳細（所有者と当該施設だけが読める）</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>block_id</td><td>uuid</td><td>主キー（<code>external_blocks</code>）</td></tr>
+      <tr><td>advertiser_name / product_name / agency_name</td><td>text</td><td>すべて任意</td></tr>
+      <tr><td>memo</td><td>text</td><td>任意</td></tr>
+    </tbody></table>
+    <p class="small" style="padding:0 16px 12px">RLS：所有組織のメンバーと当該施設のメンバーだけが SELECT できます。運営ロールにはポリシーを作りません。サービスロールの処理でも読みません。運営が代行入力する場合、この行は作りません。</p></div></details>
+
+  <details class="tbl"><summary><span class="tn">exclusivity_locks</span><span class="td">競合カテゴリの排他（予約とブロックの共通）</span><span class="pill p-change">変更</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>booking_id / block_id</td><td>uuid</td><td>どちらか一方だけを持つ（CHECK num_nonnulls = 1）</td></tr>
+      <tr><td>facility_id / category_code</td><td>uuid / text</td><td>施設とカテゴリ</td></tr>
+      <tr><td>period</td><td>daterange</td><td>EXCLUDE USING gist（施設が同じ・カテゴリが同じ・期間が重なる、を禁止）</td></tr>
+      <tr><td>advertiser_org_id / ref_count</td><td>uuid / int</td><td>既存 R-14 を継承。同じ広告主の予約は1行にまとめて、自分自身との衝突を防ぐ。ブロックは広告主が分からないため、ブロックごとに1行</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">schedule_checks</span><span class="td">施設の月次確認（情報の鮮度）</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>facility_id / target_month</td><td>uuid / date</td><td>対象施設と確認した月</td></tr>
+      <tr><td>asked_at / confirmed_at / confirmed_by</td><td></td><td>LINEで聞いた日時と、答えた日時・人</td></tr>
+      <tr><td>result</td><td>text</td><td>no_change / updated</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">public_events</span><span class="td">一般向けに公開するイベント・サンプリング</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>id / slug</td><td>uuid / text</td><td>まとめサイトのURLに使う</td></tr>
+      <tr><td>facility_id / booking_id / block_id</td><td>uuid</td><td>元になった予約・ブロック（施設の自主イベントなら空）</td></tr>
+      <tr><td>kind</td><td>text</td><td>sampling / event / campaign</td></tr>
+      <tr><td>title / summary / starts_on / ends_on / time_note</td><td></td><td>掲載内容。化粧品・健康食品は広告主の承認済み文面のみ</td></tr>
+      <tr><td>is_sponsored / sponsor_display_name</td><td>boolean / text</td><td>広告主が費用を負担していれば「PR」と広告主名を自動表示</td></tr>
+      <tr><td>sponsor_consent_at / facility_consent_at</td><td>timestamptz</td><td>両方そろうまで公開しない</td></tr>
+      <tr><td>review_status / reviewed_by / review_note</td><td></td><td>運営の審査（表現・酒類・PR表記）</td></tr>
+      <tr><td>is_alcohol</td><td>boolean</td><td>酒類。ミニアプリでは20歳以上と答えた人にだけ表示する。まとめサイトの公開ビュー（<code>v_public_events</code>）には含めない（年齢確認の画面を設けるまで）</td></tr>
+      <tr><td>target_genders / target_age_bands</td><td>text[] / text[]</td><td>任意。広告主や施設が指定する、優先して見せたい属性。空なら全員が対象。対象外の人にも一覧には表示し、おすすめの順位だけに使う</td></tr>
+      <tr><td>publish_status / withdrawn_at</td><td>text / timestamptz</td><td>scheduled / published / ended / withdrawn。取り消されたら数分以内に全面から消す</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">offers / coupon_grants</span><span class="td">特典と、その配布・当選・使用</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>offers.premium_type</td><td>text</td><td>discount_all（全員割引）/ gift_all（全員物品）/ lottery（抽選）/ open_lottery（応募・受け取り・利用のどれにも来館が関わらない抽選）/ sample（試供品）</td></tr>
+      <tr><td>offers.entry_conditions / receipt_method / notice_channels</td><td>jsonb / text / text[]</td><td>応募条件・受け取り方法・告知先。どれかに来館が関わる場合は、自動で一般懸賞として扱う</td></tr>
+      <tr><td>offers.eligibility / partner_program_code</td><td>text / text</td><td>all（登録者全員）/ partner_members（提携サブスクの会員限定）と、対象のサブスク</td></tr>
+      <tr><td>offers.target_genders / target_age_bands</td><td>text[]</td><td>任意。おすすめの順位に使う</td></tr>
+      <tr><td>offers.funding_source</td><td>text</td><td>facility / sponsor / mappa</td></tr>
+      <tr><td>offers.transaction_value_yen</td><td>int</td><td>取引価額（入館料など。来館者対象は原則100円）</td></tr>
+      <tr><td>offers.sales_forecast_yen</td><td>int</td><td>売上予定総額（懸賞のとき必須）</td></tr>
+      <tr><td>offers.max_prize_yen / total_cap_yen / winners_limit</td><td>int</td><td>システムが計算する上限。手で上書きはできない</td></tr>
+      <tr><td>offers.discount_cap_yen</td><td>int</td><td>％割引の上限額（抽選の割引で必須）</td></tr>
+      <tr><td>offers.valid_weekdays / valid_hours</td><td>int[] / int4range</td><td>閑散時間帯に限る場合</td></tr>
+      <tr><td>offers.adult_only</td><td>boolean</td><td>酒類。店頭の消し込み画面で「年齢を確認した」のチェックを必須にする</td></tr>
+      <tr><td>offers.legal_status / approved_by</td><td></td><td>法務の承認</td></tr>
+      <tr><td>offers.line_coupon_id</td><td>text</td><td>LINEのクーポン機能を使う場合</td></tr>
+      <tr><td>coupon_grants.status</td><td>text</td><td>issued / lost / won / redeemed / expired</td></tr>
+      <tr><td>coupon_grants.receipt_no / code_secret</td><td>text / bytea</td><td>受取番号（QRに入れる）と、60秒ごとに変わる6桁コードの元になる秘密値</td></tr>
+      <tr><td>coupon_grants.redeemed_at / redeemed_facility_id / redeemed_by</td><td></td><td>店頭での消し込みの記録</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">consumers / consumer_profiles / consumer_consents</span><span class="td">一般ユーザー（別系統）</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>consumers.line_user_id</td><td>text</td><td>一般向けミニアプリで取得したユーザーID（一意）</td></tr>
+      <tr><td>consumers.status / withdrawn_at</td><td></td><td>退会したら30日以内に関連データを削除</td></tr>
+      <tr><td>consumer_profiles.gender</td><td>text</td><td>female / male / other / no_answer</td></tr>
+      <tr><td>consumer_profiles.age_band</td><td>text</td><td>under16 / 16_19 / 20s / 30s / 40s / 50s / 60plus。16歳未満は属性を保存せず、配信と統計の対象にしない（令和8年改正個人情報保護法の施行に合わせて見直す）。20歳未満には酒類を表示しない</td></tr>
+      <tr><td>consumer_profiles.home_pref_code / home_city_code</td><td>text</td><td>住まいのエリア（市区町村まで）</td></tr>
+      <tr><td>consumer_profiles.frequent_area_codes</td><td>text[]</td><td>よく行くエリア（最大3）</td></tr>
+      <tr><td>consumer_profiles.notify_frequency / notify_hour</td><td>text / smallint</td><td>weekly（既定。週のおすすめ〈金曜17時〉＋新着のお知らせ〈1人週2回まで〉）/ new_only（新着のお知らせのみ）/ daily（毎日のおすすめ）/ off。時刻は既定17時</td></tr>
+      <tr><td>consumer_consents.doc / version / agreed_at / withdrawn_at</td><td></td><td>利用規約・プライバシーポリシー・配信・位置情報への同意の版と日時</td></tr>
+      <tr><td>consumer_favorites.consumer_id / facility_id / created_at</td><td></td><td>お気に入りの施設（事業者側の <code>favorites</code> とは別に持つ）</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">line_channels / line_friendships</span><span class="td">LINEのチャネルと友だち状態</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>line_channels.purpose</td><td>text</td><td>consumer_oa / facility_oa / consumer_miniapp / facility_login / advertiser_login</td></tr>
+      <tr><td>line_channels.channel_id / plan / monthly_budget_yen</td><td></td><td>秘密情報（チャネルシークレット等）はここに置かない</td></tr>
+      <tr><td>line_friendships.channel_id / subject_type / subject_id</td><td></td><td>どのアカウントの、誰の状態か</td></tr>
+      <tr><td>line_friendships.is_friend / followed_at / unfollowed_at</td><td></td><td>Webhook（友だち追加・ブロック）で更新</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">segments / push_campaigns / push_deliveries</span><span class="td">配信</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>segments.definition</td><td>jsonb</td><td>エリア・年代・性別・お気に入り・配信頻度の条件</td></tr>
+      <tr><td>push_campaigns.kind</td><td>text</td><td>weekly / new_arrival / daily / manual / test</td></tr>
+      <tr><td>push_campaigns.content / link_urls</td><td>jsonb / text[]</td><td>リンク先はマッパが管理するドメインだけを許可（保存時に検査）</td></tr>
+      <tr><td>push_campaigns.contains_sponsored</td><td>boolean</td><td>冒頭に「PR」を自動で付ける</td></tr>
+      <tr><td>push_campaigns.est_recipients / est_cost_yen / approved_by</td><td></td><td>送信前の見積もりと承認</td></tr>
+      <tr><td>push_deliveries.retry_key</td><td>uuid</td><td>X-Line-Retry-Key。送る前に発行して保存する</td></tr>
+      <tr><td>push_deliveries.status / sent_at / error_code</td><td></td><td>月ごとに分割し、13か月で削除</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">share_links / share_link_views</span><span class="td">代理店の提案共有ページ</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>token_hash</td><td>bytea</td><td>URLのトークンはハッシュで保存（128ビット以上）</td></tr>
+      <tr><td>org_id / created_by / title / client_label</td><td></td><td>作った組織と、どの顧客向けか</td></tr>
+      <tr><td>scope</td><td>jsonb</td><td>施設・枠・期間・表示する項目</td></tr>
+      <tr><td>show_branding</td><td>boolean</td><td>プランから自動で決まる（無料は true）</td></tr>
+      <tr><td>expires_at / revoked_at</td><td>timestamptz</td><td>既定30日。いつでも取り消せる</td></tr>
+      <tr><td>share_link_views</td><td></td><td>閲覧日時・IPと端末のハッシュ（有料プランの閲覧分析に使う）</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">plans / subscriptions / ad_campaigns</span><span class="td">収益化</span><span class="pill p-info">新規</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>plans.code / monthly_price_yen / entitlements</td><td></td><td>free / pro / business。権利はロゴ非表示・自社ロゴ・分析・席数・API</td></tr>
+      <tr><td>subscriptions.org_id / plan_code / status</td><td></td><td>Stripe Billing と同期</td></tr>
+      <tr><td>subscriptions.is_business_confirmed</td><td>boolean</td><td>事業者としての申込であることの確認（特定商取引法の適用除外の根拠）</td></tr>
+      <tr><td>ad_campaigns.slot_code / category_code / landing_url</td><td></td><td>共有ページ・まとめサイトの枠</td></tr>
+      <tr><td>ad_campaigns.excluded_advertiser_kinds</td><td>text[]</td><td>代理店・マッパ販売の広告を共有ページに出さないための除外設定</td></tr>
+    </tbody></table></div></details>
+
+  <details class="tbl"><summary><span class="tn">audit_logs / break_glass_requests</span><span class="td">監査と緊急閲覧</span><span class="pill p-change">変更</span></summary>
+    <div class="tw"><table><thead><tr><th>列</th><th>型</th><th>説明</th></tr></thead><tbody>
+      <tr><td>audit_logs.action</td><td>text</td><td>変更に加え、閲覧（詳細・個人データ・データ出力）も記録。詳細と個人データの変更は、列名と行IDだけを記録し、値（変更前後の内容）は残さない</td></tr>
+      <tr><td>break_glass_requests.target_type / target_id / reason</td><td></td><td>何を、なぜ見るか</td></tr>
+      <tr><td>break_glass_requests.facility_consent_by / approved_by</td><td>uuid</td><td>当該施設の同意と、申請者とは別の運営管理者の承認</td></tr>
+      <tr><td>break_glass_requests.expires_at / used_at</td><td>timestamptz</td><td>最長24時間。使ったら登録した組織に通知</td></tr>
+    </tbody></table></div></details>
+
+  <h3>見える範囲（RLS）の方針</h3>
+  <div class="tw"><table>
+    <thead><tr><th>データ</th><th>読めるのは</th><th>経路</th></tr></thead>
+    <tbody>
+      <tr><td>空き状況（ブロック含む）</td><td>ログイン中の事業者</td><td>公開レベルに応じた列だけを返すビュー <code>v_availability</code>。元のテーブルは直接読めない</td></tr>
+      <tr><td>ブロック本体と排他（<code>external_blocks</code>・<code>exclusivity_locks</code>）</td><td>所有組織と当該施設のメンバー</td><td>それ以外（運営を含む）は <code>v_availability</code> 経由のみ。排他の判定は EXCLUDE 制約と登録用の関数で行うので、行を読む権限は要らない。押さえ込みの監視には、組織ごとの申請数と失効数だけを返す集計関数を使う</td></tr>
+      <tr><td>ブロックの詳細</td><td>所有組織と当該施設のメンバー</td><td><code>block_private_details</code>。運営ロールのポリシーはない。サービスロールの処理でも読まない</td></tr>
+      <tr><td>一般ユーザーのデータ</td><td>本人と、配信ワーカー（理由付きのサービスロール）</td><td>運営の画面は集計ビュー経由。個別の閲覧は問い合わせ対応時に運営管理者だけができ、記録が残る</td></tr>
+      <tr><td>公開イベント・特典</td><td>だれでも</td><td>公開ビュー <code>v_public_events</code>（審査済み・両者が許可・公開中のみ）。まとめサイトの接続はこのビューにだけ権限がある</td></tr>
+      <tr><td>共有ページ</td><td>リンクを持つ人</td><td>トークンを照合する関数だけを経由し、スコープ内の項目だけを返す</td></tr>
+      <tr><td>統計レポート</td><td>各ロールの範囲</td><td>10人未満の区分は出さない集計ビュー</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <h2><span class="n">7</span>開発フェーズと工数</h2>
+  <p class="sub">順番の考え方は、「在庫の正しさ → 開放 → 集客 → 収益化」です。一般ユーザーに見せる情報（イベント・特典）は、施設と代理店が入力したデータから生まれます。そのため、事業者側の基盤を先に作らないと、一般向けに出すものがありません。セキュリティ（権限・RLS・監査）は最後に足すものではなく、Phase 1 から作り込みます。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>依頼の段階</th><th>この設計での位置</th></tr></thead>
+    <tbody>
+      <tr><td>MVP（最初のリリース）</td><td>Phase 1＋2。施設のスケジュール基盤と、代理店への開放・マッパ販売まで。プロトタイプの在庫エンジン（空き判定・排他・料金計算）は、サーバー実装の仕様とテストの期待値として流用し、画面は作り直します</td></tr>
+      <tr><td>セキュリティ構築</td><td>Phase 1 から作り込みます（権限・RLS・監査・中立性）。外部の診断は、代理店に開放する前（Phase 2）と一般公開の前（Phase 3）の2回</td></tr>
+      <tr><td>LINE LIFF の実装</td><td>施設向けLIFFは Phase 1、一般向けミニアプリは Phase 3</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="gantt" role="img" aria-label="Phase 0 準備が1〜4週、Phase 1 施設のスケジュール基盤が5〜14週、Phase 2 代理店への開放とマッパ販売が15〜27週、Phase 3 一般ユーザー向けが28〜37週、Phase 4 収益化が38〜43週。並行して、LINEヤフー社への確認と法務が1〜4週、施設の受け入れ準備が11週以降、権限とマスキングの外部診断が22〜23週、代理店のβ利用が24〜27週、ミニアプリの認証審査が32〜34週、一般向けの外部診断が35〜37週。">
+    <div class="g-grid">
+      <div></div>
+      <div class="g-h" style="grid-column: 2 / span 4">W1</div>
+      <div class="g-h" style="grid-column: 6 / span 4">W5</div>
+      <div class="g-h" style="grid-column: 10 / span 4">W9</div>
+      <div class="g-h" style="grid-column: 14 / span 4">W13</div>
+      <div class="g-h" style="grid-column: 18 / span 4">W17</div>
+      <div class="g-h" style="grid-column: 22 / span 4">W21</div>
+      <div class="g-h" style="grid-column: 26 / span 4">W25</div>
+      <div class="g-h" style="grid-column: 30 / span 4">W29</div>
+      <div class="g-h" style="grid-column: 34 / span 4">W33</div>
+      <div class="g-h" style="grid-column: 38 / span 4">W37</div>
+      <div class="g-h" style="grid-column: 42 / span 4">W41</div>
+
+      <div class="g-lb">Phase 0 準備<small>コードは書かない</small></div>
+      <div class="g-bar g-p0" style="grid-column: 2 / 6">4週</div>
+      <div class="g-lb">Phase 1 施設の基盤<small>約100人日</small></div>
+      <div class="g-bar g-p1" style="grid-column: 6 / 16">10週</div>
+      <div class="g-lb">Phase 2 開放・マッパ販売<small>約127人日</small></div>
+      <div class="g-bar g-p2" style="grid-column: 16 / 29">13週</div>
+      <div class="g-lb">Phase 3 一般ユーザー向け<small>約95人日</small></div>
+      <div class="g-bar g-p3" style="grid-column: 29 / 39">10週</div>
+      <div class="g-lb">Phase 4 収益化<small>約55人日</small></div>
+      <div class="g-bar g-p4" style="grid-column: 39 / 45">6週</div>
+
+      <div class="g-lb dim">LINEヤフー社確認・法務</div>
+      <div class="g-bar g-side" style="grid-column: 2 / 6">確認</div>
+      <div class="g-lb dim">施設の受け入れ準備</div>
+      <div class="g-bar g-side" style="grid-column: 12 / 46">施設への案内・入力の立ち上げ</div>
+      <div class="g-lb dim">外部診断（権限・マスキング）</div>
+      <div class="g-bar g-side" style="grid-column: 23 / 25">診断</div>
+      <div class="g-lb dim">代理店のβ利用</div>
+      <div class="g-bar g-side" style="grid-column: 25 / 29">β</div>
+      <div class="g-lb dim">ミニアプリの認証審査</div>
+      <div class="g-bar g-side" style="grid-column: 33 / 36">審査</div>
+      <div class="g-lb dim">外部診断（一般向け）</div>
+      <div class="g-bar g-side" style="grid-column: 36 / 39">診断</div>
+    </div>
+  </div>
+  <p class="src">体制はエンジニア2名＋デザイナー0.5名＋PM（兼務）。3名体制にすれば Phase 2 と 3 の一部を並行でき、全体を2か月ほど短縮できる見込みです。</p>
+
+  <h3>Phase 0 準備（4週・コードは書かない）</h3>
+  <ul class="plain">
+    <li>LINEヤフー社（または認定パートナー）に、一般向け公式アカウントで施設特典や広告主のサンプリングを配信することが、規約上の第三者広告にあたらないかを確認します。</li>
+    <li>運営法人名義でプロバイダーを作り、2つの公式アカウント（ビジネスマネージャーに接続）、ミニアプリチャネル、ログインチャネルを作ります。認証済アカウントも申請します。</li>
+    <li>利用規約とプライバシーポリシーを整えます。利用目的、データを保管する国とその国の個人情報保護制度（外的環境の把握）、外部送信の公表内容を含めます。特典の区分判定と上限計算のルールは法務と決めます。</li>
+    <li>施設10〜20店舗と代理店3〜5社にヒアリングします。他社案件の入力に抵抗はないか、無料開放に参加する意向はあるか、有料プランにいくらなら払えるかを聞きます。</li>
+    <li>9章の確認事項に回答をいただきます。</li>
+  </ul>
+
+  <h3>Phase 1 施設のスケジュール基盤（10週・約100人日）</h3>
+  <p class="small">ゴール：施設が他社案件も含めて空きを正しく登録し続け、運営がそれを見て販売できる状態。</p>
+  <div class="tw"><table>
+    <thead><tr><th>作業</th><th>主な内容</th><th class="n">人日</th></tr></thead>
+    <tbody>
+      <tr><td>認証の基盤</td><td>施設LIFFのIDトークン検証とセッション、LINEを使わないスタッフのメールのワンタイムコード、運営のSSO＋多要素認証、招待コード、退職時の失効、画面遷移の制御</td><td class="n">12</td></tr>
+      <tr><td>権限・RLS・監査</td><td>ロール×所属の判定、詳細テーブルとブロック本体の分離（運営も閲覧不可）、CS閲覧とサービスロールの制限、閲覧記録、ブレークグラス</td><td class="n">12</td></tr>
+      <tr><td>施設・枠マスタ</td><td>館内ゾーン、緯度経度、カテゴリ一覧、CSVでの取り込み</td><td class="n">9</td></tr>
+      <tr><td>在庫とブロック</td><td>ブロックの台数の在庫への反映、排他の一般化、容量超過の拒否、衝突アラート</td><td class="n">16</td></tr>
+      <tr><td>施設LIFFの画面</td><td>今日のタスク、スケジュール、2タップ登録、Undo、スタッフ管理</td><td class="n">12</td></tr>
+      <tr><td>施設向け公式アカウント</td><td>リッチメニュー、Webhookの署名検証、通知、月次確認</td><td class="n">6</td></tr>
+      <tr><td>運営の管理画面</td><td>一括代行入力、施設管理、横断ビュー、監査ログの閲覧</td><td class="n">10</td></tr>
+      <tr><td>テスト・移行</td><td>権限のテスト（見えてはいけないものが見えないこと。運営のCS閲覧でブロックの詳細が0件であることを含む）、同時登録での容量超過0件、移行</td><td class="n">10</td></tr>
+      <tr><td class="dim">バッファ（15%）</td><td class="dim">仕様変更・レビュー</td><td class="n dim">13</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Phase 2 代理店への開放とマッパ販売（13週・約127人日）</h3>
+  <p class="small">ゴール：代理店が無料で空きを確認・提案・申請でき、広告主はマッパ販売枠を当日中に予約・決済できる状態。</p>
+  <div class="tw"><table>
+    <thead><tr><th>作業</th><th>主な内容</th><th class="n">人日</th></tr></thead>
+    <tbody>
+      <tr><td>組織とログイン</td><td>代理店・広告主の登録と審査、メール・Google・Microsoftでのログイン、LINEログイン（任意）、招待</td><td class="n">8</td></tr>
+      <tr><td>空き検索・施設詳細</td><td>公開レベルに応じた表示、鮮度の表示、回数制限（スクレイピング対策）、カテゴリ排他で断った回数の上限</td><td class="n">12</td></tr>
+      <tr><td>提案・共有ページ</td><td>署名付きURL、期限と取り消し、閲覧記録、noindex、Powered by の表示と広告枠の場所（中身はマッパの無料登録の案内を固定で表示）</td><td class="n">10</td></tr>
+      <tr><td>代理店の申請と施設の確認</td><td>申請、72時間の期限、同時申請数の上限、施設側の承認画面</td><td class="n">8</td></tr>
+      <tr><td>マッパ販売の予約</td><td>30分の仮押さえ、排他、料金計算（既存設計の見積もりを流用）</td><td class="n">13</td></tr>
+      <tr><td>決済・請求書</td><td>Stripe Checkout、Webhook、請求書（既存設計の見積もりを流用）</td><td class="n">11</td></tr>
+      <tr><td>着荷・実施報告</td><td>施設LIFFへの追加、広告主側の進み具合の表示</td><td class="n">8</td></tr>
+      <tr><td>通知</td><td>メールとLINE（施設）の通知</td><td class="n">5</td></tr>
+      <tr><td>運営の予約管理</td><td>予約横断、キャンセル・返金、施設への支払</td><td class="n">9</td></tr>
+      <tr><td>既存設計の確定改訂の追加分</td><td>見積書（R-27）5、複数施設カート（R-28）4、請求書PDF（R-29）3、広告主のセルフキャンセル（R-30）3、銀行振込の入金消込（R-18）0.5</td><td class="n">16</td></tr>
+      <tr><td>テスト</td><td>決済の一気通貫、権限・マスキングの外部診断への対応、代理店のβ利用</td><td class="n">10</td></tr>
+      <tr><td class="dim">バッファ（15%）</td><td class="dim"></td><td class="n dim">17</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Phase 3 一般ユーザー向け（10週・約95人日）</h3>
+  <p class="small">ゴール：一般ユーザーがLINEから特典とイベントを見つけて施設に行き、その効果を広告主と施設に集計値で返せる状態。</p>
+  <div class="tw"><table>
+    <thead><tr><th>作業</th><th>主な内容</th><th class="n">人日</th></tr></thead>
+    <tbody>
+      <tr><td>一般向けミニアプリ</td><td>友だち追加、同意、3問アンケート、配信設定、退会とデータ削除</td><td class="n">10</td></tr>
+      <tr><td>公開のワークフロー</td><td>広告主と施設の公開許可、PR表記、表現・酒類の審査、許可取消時の即時撤去</td><td class="n">8</td></tr>
+      <tr><td>特典・クーポン</td><td>区分と上限の自動計算、配布、抽選、店頭の消し込み、不正対策</td><td class="n">14</td></tr>
+      <tr><td>配信エンジン</td><td>おすすめの選び方、セグメント、頻度上限、予算上限、再送キー、送る直前のリンク検査、配信ログ、配信拒否率</td><td class="n">12</td></tr>
+      <tr><td>その場で受け取るおすすめ</td><td>リッチメニューから応答メッセージで返す（無料）</td><td class="n">4</td></tr>
+      <tr><td>まとめサイト</td><td>別ドメイン、静的生成、品質基準とnoindex、サイトマップ、外部送信の公表</td><td class="n">12</td></tr>
+      <tr><td>効果測定</td><td>クーポンの利用、配信への反応、広告主向け統計（10人未満の区分は出さない）</td><td class="n">8</td></tr>
+      <tr><td>同意とデータの管理</td><td>同意の版管理、保持期間と削除のジョブ</td><td class="n">5</td></tr>
+      <tr><td>テスト・診断への対応</td><td>一般向けの面の外部診断で見つかった点の修正</td><td class="n">10</td></tr>
+      <tr><td class="dim">バッファ（15%）</td><td class="dim"></td><td class="n dim">12</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Phase 4 収益化（6週・約55人日）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>作業</th><th>主な内容</th><th class="n">人日</th></tr></thead>
+    <tbody>
+      <tr><td>プランと課金</td><td>Stripe Billing、請求書払い、権利の切り替え、事業者としての申込確認</td><td class="n">12</td></tr>
+      <tr><td>広告枠</td><td>広告の入稿、出してはいけない広告の除外、計測、プランによる非表示（共有ページとまとめサイト）</td><td class="n">8</td></tr>
+      <tr><td>有料の分析</td><td>共有ページの閲覧分析、実績レポート</td><td class="n">12</td></tr>
+      <tr><td>外部連携</td><td>カレンダー（iCal・Google）、CSV、API（ビジネスプラン）</td><td class="n">10</td></tr>
+      <tr><td>テスト</td><td></td><td class="n">6</td></tr>
+      <tr><td class="dim">バッファ（15%）</td><td class="dim"></td><td class="n dim">7</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>各フェーズの成功指標（仮）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>フェーズ</th><th>指標</th></tr></thead>
+    <tbody>
+      <tr><td>Phase 1</td><td>二重予約・容量超過 0件。直近30日に予定を確認した施設が80%以上。他社案件のブロックを登録した施設が半数以上</td></tr>
+      <tr><td>Phase 2</td><td>登録代理店10社以上。共有ページの作成が月100件以上。マッパ販売の確定がリリース後4週間で15件以上、うち広告主のセルフサービスが60%以上（既存設計の Phase 1 の指標を継承）</td></tr>
+      <tr><td>Phase 3</td><td>友だち数の目標（Phase 0で決定）。追加から30日以内の配信拒否率20%未満。特典の利用率</td></tr>
+      <tr><td>Phase 4</td><td>無料の代理店のうち有料に切り替えた割合。共有ページ経由の新規登録数</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <h2><span class="n">8</span>費用の目安</h2>
+  <div class="tw"><table>
+    <thead><tr><th>項目</th><th>目安</th><th>補足</th></tr></thead>
+    <tbody>
+      <tr><td>開発工数</td><td class="n">約375人日</td><td>エンジニアの工数。Phase 1〜4の合計（バッファ15%込み）。既存設計の Phase 1（約142人日）の中身と、確定改訂 R-18・R-27〜R-30 の追加分（約16人日）を、v2の Phase 1・2に割り振っています</td></tr>
+      <tr><td>デザイン工数</td><td class="n">約95人日</td><td>デザイナー0.5名×Phase 1〜4（約39週）。開発工数には含みません。PMは兼務で別枠です</td></tr>
+      <tr><td>インフラ（月額）</td><td class="n">約39,000円〜</td><td>既存設計の Supabase 構成（100施設・月100予約の想定）。まとめサイトのホスティングを足しても、大きくは増えない見込み</td></tr>
+      <tr><td>施設向け公式アカウント（月額）</td><td class="n">5,000円</td><td>ライトプラン（月5,000通まで）。通知が増えたらスタンダードへ</td></tr>
+      <tr><td>一般向け公式アカウント（月額）</td><td class="n">15,000円〜</td><td>友だち数と頻度しだい（<a href="#s5-2">5.2の表</a>）。既定（週1回＋新着のお知らせ）なら1万人で月約5.4万円〜最大約31万円（新着が全員に週2回届いた場合）、毎日なら約79万円</td></tr>
+      <tr><td>決済手数料</td><td>決済額の3.6%</td><td>マッパ販売（既存設計どおり）と有料プランの課金</td></tr>
+      <tr><td>初期の一時費用</td><td>55〜75万円＋α</td><td>既存設計の見積もり（規約作成・資金決済法の整理など）。これに、一般向けの規約・景品表示法・個人情報の確認費用と、外部の脆弱性診断（代理店への開放前と一般公開前の2回）の費用が加わります（どちらも要見積）</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <h2><span class="n">9</span>リスクと確認事項</h2>
+
+  <h3>主なリスク</h3>
+  <div class="tw"><table>
+    <thead><tr><th>リスク</th><th>起きると何が困るか</th><th>対策</th></tr></thead>
+    <tbody>
+      <tr><td>一般向け配信がLINEの規約（第三者広告の禁止）に抵触する</td><td>公式アカウントの停止。一般向けの集客の柱がなくなる</td><td>Phase 0 で事前に確認する。結果に応じて、配信内容を「マッパのイベント情報サービスの案内」に寄せるか、コラボアカウントを使う</td></tr>
+      <tr><td>代理店が他社案件を入力しない</td><td>空きの情報が不正確なまま。無料開放の価値が出ない</td><td>運営も見られない中立性、2タップの入力、月1回の確認。Phase 0 で入力の意向を聞く</td></tr>
+      <tr><td>無料チャネルで枠を押さえ込まれる</td><td>競合を締め出すための仮登録で、人気の枠が埋まる</td><td>施設の確認制、72時間の期限、同時申請数の上限、失効の記録</td></tr>
+      <tr><td>マスキングした内容が推測される</td><td>代理店の出稿計画が競合に漏れる</td><td>カテゴリの排他で断った回数の上限と運営への通知、空き状況APIの回数制限、「予約ありのみ」のブロックは実施中もカテゴリを出さない、登録画面での注意表示</td></tr>
+      <tr><td>配信費用が膨らむ</td><td>毎日配信で月数十万〜数百万円</td><td>既定は週1回＋新着（新着は1人週2回まで）、月の予算上限、配信拒否率による自動の頻度調整、応答メッセージ（無料）の活用</td></tr>
+      <tr><td>抽選特典が景品規制を超える</td><td>措置命令のおそれ</td><td>区分の選択を必須にし、上限を自動計算、施設×期間で合算、法務の承認</td></tr>
+      <tr><td>まとめサイトが検索エンジンから低品質と評価される</td><td>検索からの流入が得られない</td><td>1イベント1ページ、品質基準未満はnoindex、編集者の一言、量産ページを作らない</td></tr>
+      <tr><td>サウナイキタイが施設のイベント投稿機能を出す</td><td>一般ユーザー向けの先行優位が縮む</td><td>複数の代理店の案件を横断する網羅性と、LINEでの完結で差別化する。連携の余地も探る</td></tr>
+      <tr><td>「運営は見られない」という約束が実態と食い違う</td><td>発覚すれば、無料開放の前提（中立性）が崩れる</td><td>約束の範囲を「運営の業務画面と運営ロール」と正確に書く。データベースの管理者権限を限られた技術担当に絞り、アクセスを記録して定期的に確認する。詳細を監査ログ・分析ツール・エラー監視に複製しない</td></tr>
+      <tr><td>LIFFがLINEミニアプリに統合される</td><td>施設向けLIFFの作り直しが必要になるおそれ</td><td>既存・新規のLIFFは統合後も使えると公式に明記されている。画面は通常のWebとして作り、LIFF固有の機能への依存を減らす</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>発注者に確認したいこと</h3>
+  <ol class="plain">
+    <li><strong>LINEの規約の確認を先に行ってよいか。</strong>一般向け公式アカウントで施設特典や広告主のサンプリングを配信することについて、LINEヤフー社（または認定パートナー）に事前確認します。</li>
+    <li><strong>友だち数の目標と、LINE配信にかけられる月額予算。</strong>友だち1万人に毎日配信すると月約79万円（税別）です。既定（週1回＋新着のお知らせ、1人週2回まで）なら、1万人で月約5.4万〜最大約31万円です。これを既定にしてよいか。</li>
+    <li><strong>代理店の自社案件を「施設の確認制」にしてよいか。</strong>既存設計の重要決定4（施設に承認させない）の例外になります。マッパ販売枠は即時確定のままです。</li>
+    <li><strong>マスキング詳細を運営にも見せない方針でよいか。</strong>問い合わせ対応では詳細を見られないので、緊急時はブレークグラスを使うことになります。</li>
+    <li><strong>公開の粒度。</strong>マッパ販売の案件を、広告主が許可した場合に一般向けに紹介する運用でよいか（既存設計の確認事項4「他社の商材名を公開してよいか」とあわせて）。</li>
+    <li><strong>「抽選で入館料半額」をやるかどうか。</strong>やる場合は、景品の提供主体（マッパか施設か）と取引価額の考え方を、弁護士か消費者庁の相談窓口に確認します。</li>
+    <li><strong>代理店・広告主のログインにLINEを必須にしないことでよいか。</strong>会社の方針で、個人のLINEを業務に使えない場合があるためです。</li>
+    <li><strong>LINEのプロバイダーの名義。</strong>運営法人の名義で作ります。認証済アカウントやミニアプリの認証に使う法人番号を教えてください。</li>
+    <li><strong>有料プランの価格帯。</strong>月5,000〜10,000円の帯で、Phase 0 のヒアリングにより決めてよいか。</li>
+    <li><strong>体制。</strong>エンジニア2名で約43週（約10か月）か、3名にして約2か月短縮するか。</li>
+    <li><strong>「施設・管理者用」アカウントの対象。</strong>「管理者」は施設の管理者と解釈し、マッパ運営はLINEを使わない設計にしています。運営もLINEで通知を受けたい場合はお知らせください。</li>
+    <li><strong>連携したいサウナサブスクと、提携交渉の担当。</strong>おふろパス・FLEXKEY などには公開APIがないため、連携するには各社と個別に提携する必要があります。</li>
+    <li><strong>既存設計の確認事項6点（未回答）</strong>…キャンセル料の課税区分、キャンセル料の施設への配分、定休日の什器の扱い、他社商材の公開範囲、広告主の支払条件、免税事業者の店舗数。</li>
+  </ol>
+</section>
+
+<!-- ============ 付録 ============ -->
+<section id="sa">
+  <h2><span class="n">付録</span>調査で確認した主な事実と出典</h2>
+  <p class="sub">2026年9月時点の公式の一次情報で、再確認したものです。LINEの仕様・料金と法令の運用は変わることがあるので、実装の直前に再確認します。</p>
+  <div class="tw"><table>
+    <thead><tr><th>事実</th><th>出典</th></tr></thead>
+    <tbody>
+      <tr><td>LIFFはLINEミニアプリに統合する方針で、新規作成はミニアプリとして作ることが推奨されている。既存・新規のLIFFは統合後も使える。統合時期は未定</td><td class="src"><a href="https://developers.line.biz/ja/news/2025/02/12/line-mini-app/">LINE Developers ニュース（2025年2月12日）</a></td></tr>
+      <tr><td>未認証のミニアプリは審査なしで公開できる。認証済みには審査（1〜2週間程度）が必要</td><td class="src"><a href="https://developers.line.biz/ja/docs/line-mini-app/discover/custom-features/">LINEミニアプリ カスタム機能</a></td></tr>
+      <tr><td>LIFFを追加できるのは、LINEログインチャネルとミニアプリチャネルだけ。LINEログインチャネル1つにつき最大30件</td><td class="src"><a href="https://developers.line.biz/ja/docs/liff/registering-liff-apps/">LIFFアプリの登録</a></td></tr>
+      <tr><td>プロフィールをLIFFからサーバーへ送ってはいけない。IDトークンを送り、サーバーで検証する</td><td class="src"><a href="https://developers.line.biz/ja/docs/liff/using-user-profile/">LIFFでユーザー情報を使う</a></td></tr>
+      <tr><td>ユーザーIDはプロバイダーごとに発行され、同じプロバイダーの下ならチャネルの種類にかかわらず同じ値になる</td><td class="src"><a href="https://developers.line.biz/ja/docs/messaging-api/getting-user-ids/">ユーザーIDを取得する</a></td></tr>
+      <tr><td>利用者情報は公式アカウントごとに管理し、別のアカウントで使ってはならない。メッセージには自社が管理していないページへのリンクを入れてはならない</td><td class="src"><a href="https://terms2.line.me/official_account_api_terms_jp?lang=ja">公式アカウントAPI利用規約 第5条</a></td></tr>
+      <tr><td>事前の承諾なく、公式アカウントを第三者のための広告媒体として使ってはならない</td><td class="src"><a href="https://terms2.line.me/official_account_guideline_jp">LINE公式アカウント ガイドライン・利用規約 第18条</a></td></tr>
+      <tr><td>料金プランは月0円・5,000円・15,000円（税別）。2026年10月1日から、追加メッセージは月20万通まで1通3円、それを超える分は1通2.5円</td><td class="src"><a href="https://www.lycbiz.com/jp/news/line-official-account/20260216/">LINEヤフー for Business お知らせ</a></td></tr>
+      <tr><td>マルチキャストは1回500人まで、毎秒200回まで。再送キー（X-Line-Retry-Key）で二重送信を防げる。応答メッセージは通数に数えない</td><td class="src"><a href="https://developers.line.biz/ja/reference/messaging-api/">Messaging API リファレンス</a></td></tr>
+      <tr><td>性別・年代・住所は、通常のAPIでは取得できない</td><td class="src"><a href="https://developers.line.biz/ja/docs/basics/user-profile/">プロフィール情報</a></td></tr>
+      <tr><td>2026年10月14日に予定されているミニアプリポリシーの改定で、使える広告ネットワークが原則としてLINEヤフー広告ネットワークに限られ、自社広告や直接契約の広告のルールも整理される予定</td><td class="src"><a href="https://developers.line.biz/ja/news/2026/09/14/line-mini-app-policy/">LINE Developers ニュース（2026年9月14日）</a></td></tr>
+      <tr><td>一般懸賞の上限は、最高額が取引価額の20倍（5,000円以上なら10万円）、総額が売上予定総額の2%。総付景品は取引価額の20%（1,000円未満なら200円）</td><td class="src"><a href="https://www.caa.go.jp/policies/policy/representation/fair_labeling/premium_regulation/">消費者庁 景品規制の概要</a></td></tr>
+      <tr><td>抽選による値引きは景品類にあたる。全員に配る自店の割引券は値引きで、景品規制の対象外</td><td class="src"><a href="https://www.caa.go.jp/policies/policy/representation/fair_labeling/faq/premium/assets/representation_cms220_250620_01.pdf">消費者庁 景品に関するQ&amp;A</a></td></tr>
+      <tr><td>事業者が表示内容に関与した広告は、「広告」「PR」などで明瞭に示す必要がある（ステルスマーケティング規制）</td><td class="src"><a href="https://www.caa.go.jp/policies/policy/representation/fair_labeling/stealth_marketing/">消費者庁 ステルスマーケティング</a></td></tr>
+      <tr><td>統計情報は、個人との対応関係がなければ本人の同意なく提供できる</td><td class="src"><a href="https://www.ppc.go.jp/all_faq_index/faq1-q1-17/">個人情報保護委員会 Q&amp;A 1-17</a></td></tr>
+      <tr><td>外部送信規律：タグで情報を外部に送る場合は、送信先・情報・目的を通知または公表する</td><td class="src"><a href="https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html">総務省 外部送信規律 FAQ</a></td></tr>
+      <tr><td>利用者どうしのメッセージ機能を作ると、電気通信事業の届出が必要になる</td><td class="src"><a href="https://www.soumu.go.jp/main_content/000799137.pdf">総務省 電気通信事業参入マニュアル（追補版）</a></td></tr>
+      <tr><td>検索順位の操作を目的に、価値のないページを大量に作ることはスパムにあたる</td><td class="src"><a href="https://developers.google.com/search/docs/essentials/spam-policies">Google スパムポリシー</a></td></tr>
+      <tr><td>イベントのリッチリザルトの対応地域に、日本は含まれていない</td><td class="src"><a href="https://developers.google.com/search/docs/appearance/structured-data/event">Google Event 構造化データ</a></td></tr>
+      <tr><td>LINE公式アカウントの配信を拒否（ブロック）したことがある人は70.0%。理由の1位は「配信頻度が多すぎる」26.5%。友だち追加のきっかけは「LINEスタンプ・クーポンが欲しかったから」が49.8%</td><td class="src"><a href="https://mobilus.co.jp/press-release/48566">モビルス調査（2025年9月9日）</a></td></tr>
+      <tr><td>サウナイキタイは月間約120万人・約15,000施設。施設が公式情報を投稿できる機能は開発予定（時期未定）</td><td class="src"><a href="https://sauna-ikitai.com/members/sponsor">サウナイキタイ 協賛募集</a></td></tr>
+      <tr><td>ニフティ温泉は月間の利用者数（UU）約400万人・会員130万人。体験型広告に、無償の事前告知（設置エリアに合わせて配信）を付けている</td><td class="src"><a href="https://onsen.nifty.com/download/niftyonsen_mediaguide.pdf">ニフティ温泉 媒体資料（2026年版）</a></td></tr>
+    </tbody>
+  </table></div>
+  <hr class="sep">
+  <p class="src" style="margin-top:14px">本書は既存の「温浴プロモ枠プラットフォーム MVP設計書」（2026年9月3日）を土台とした差分の設計です。本書に書いていない在庫・決済・キャンセル・精算の仕様は、既存設計書と確定改訂（R-01〜R-37）に従います。</p>
+</section>
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>(function(){var dark=window.matchMedia('(prefers-color-scheme: dark)').matches;mermaid.initialize({startOnLoad:true,theme:dark?'dark':'default',securityLevel:'strict'});})();</script>
+</body>
+</html>
