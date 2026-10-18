@@ -1,4 +1,5 @@
-import * as D from './data.js?v=6';
+import * as D from './data.js?v=7';
+import { viewV2, bindV2 } from './workspace.js?v=1';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -73,11 +74,12 @@ function sweepHolds() {
 
 /* ================= シェル ================= */
 const NAVS = {
-  adv: { label: '広告主メニュー', items: [['#/', 'ホーム'], ['#/search', '枠検索'], ['#/map', '設置マップ'], ['#/bookings', '予約管理']] },
-  fac: { label: '施設メニュー', items: [['#/f', '今日のタスク'], ['#/f/calendar', 'スケジュール']] },
+  adv: { label: '広告主メニュー', items: [['#/', 'ホーム'], ['#/search', '枠検索'], ['#/map', '設置マップ'], ['#/bookings', '予約管理'], ['#/proposals', '提案リスト']] },
+  fac: { label: '施設メニュー', items: [['#/f', '今日のタスク'], ['#/f/calendar', 'スケジュール'], ['#/external', '他社案件・ブロック']] },
   ops: { label: '運営メニュー', items: [['#/admin', 'ダッシュボード'], ['#/map', '設置マップ']] },
 };
-const ROLE_LABEL = { adv: '広告主（出稿企業）', fac: '提携施設', ops: '運営（自社）' };
+NAVS.consumer = { label: '一般ユーザーメニュー', items: [['#/discover', 'イベント・特典'], ['#/wallet', '保存した特典'], ['#/preferences', '通知・プロフィール']] };
+const ROLE_LABEL = { adv: '広告主（出稿企業）', fac: '提携施設', ops: '運営（自社）', consumer: '一般ユーザー（LINEプレビュー）' };
 
 function sidebar() {
   const cur = location.hash || '#/';
@@ -88,7 +90,7 @@ function sidebar() {
   };
   return `
   <aside class="side">
-    <div class="side-brand">マッパ<span>MAPPA</span></div>
+    <div class="side-brand">マッパ<span>MAPPA / WORKSPACE</span></div>
     <div class="side-role">
       <span class="lb">表示する立場</span>
       <select id="role-sel">
@@ -112,7 +114,7 @@ function topbar(title, ctx) {
   <header class="topbar">
     <div class="crumbs">${ROLE_LABEL[ui.role]} &rsaquo; <b>${esc(title)}</b></div>
     <div class="sp"></div>
-    <div class="meta">${ctx || ''}</div>
+    <span class="v2-demo">UIプレビュー / 外部連携なし</span><div class="meta">${ctx || ''}</div>
     <button class="btn btn-sm btn-ghost" id="open-guide" type="button">デモガイド</button>
   </header>`;
 }
@@ -1416,7 +1418,9 @@ function render() {
   const path = hash.split('/').slice(1).filter(Boolean);
   let body, ctx = '', title = '';
 
-  if (hash === '#/' || hash === '#') { ui.role = 'adv'; title = 'ホーム'; body = viewHome(); }
+  const v2 = viewV2(path[0], D, esc, myFacilityId());
+  if (v2) { ui.role = v2.role; title = v2.title; body = v2.body; }
+  else if (hash === '#/' || hash === '#') { ui.role = 'adv'; title = 'ホーム'; body = viewHome(); }
   else if (path[0] === 'search') { ui.role = 'adv'; title = '枠検索'; body = viewSearch(); ctx = `${ui.q.start} +${ui.q.days}d`; }
   else if (path[0] === 'facility') { ui.role = 'adv'; title = '施設詳細'; body = viewFacility(path[1]); }
   else if (path[0] === 'checkout') { ui.role = 'adv'; title = '申込'; body = viewCheckout(path[1]); }
@@ -1432,6 +1436,7 @@ function render() {
   $('#app').innerHTML = `<div class="app">${sidebar()}<div class="main">${topbar(title, ctx)}
     <div class="content">${body}</div>${statusbar()}</div></div>`;
   bind();
+  bindV2(D, render, toast, myFacilityId());
   if (isNav) window.scrollTo(0, 0);
   else {
     window.scrollTo(0, keepY);
@@ -1475,7 +1480,7 @@ function bind() {
   const roleSel = $('#role-sel');
   if (roleSel) roleSel.addEventListener('change', () => {
     const r = roleSel.value;
-    go(r === 'adv' ? '#/' : r === 'fac' ? '#/f' : '#/admin');
+    go(r === 'adv' ? '#/' : r === 'fac' ? '#/f' : r === 'consumer' ? '#/discover' : '#/admin');
   });
   const rs = $('#reset-demo');
   if (rs) rs.addEventListener('click', (e) => { e.preventDefault(); resetDemo(); });
@@ -1809,6 +1814,7 @@ const GUIDE_KEY = 'mappa.guide.v1';
 /** デモ用の初期データに戻す（確認つき）。スマホではサイドバー下部が隠れるので、ガイドからも呼べるようにする */
 function resetDemo() {
   if (!confirm('このブラウザで行った予約・受入制限の変更を破棄して、デモ用の初期データに戻します。よろしいですか？')) return false;
+  localStorage.removeItem('mappa.workspace.v2');
   D.resetAll(); ui.sort = {}; ui.bkFilter = { status: '', q: '' };
   toast('デモデータに戻しました'); render();
   return true;

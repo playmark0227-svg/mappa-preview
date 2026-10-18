@@ -479,7 +479,7 @@ export const facilityById = (id) => FACILITIES.find((f) => f.id === id);
 /* ---------- 永続化 ---------- */
 // v2: 初回にデモデータを入れるようにしたので、旧版で触った状態は引き継がない
 const KEY = 'mappa.state.v2';
-const blank = () => ({ bookings: [], overrides: [], seq: 1 });
+const blank = () => ({ bookings: [], overrides: [], externalBlocks: [], seq: 1 });
 
 export let state = load();
 
@@ -601,6 +601,9 @@ export function dayInfo(slotId, dateStr) {
     if (b.slotId !== slotId) continue;
     if (b.status === 'cancelled' || b.status === 'expired') continue;
     if (dateStr >= b.start && dateStr <= b.end) booked += b.qty;
+  }
+  for (const block of state.externalBlocks || []) {
+    if (block.slotId === slotId && dateStr >= block.start && dateStr <= block.end) booked += block.qty;
   }
   booked = Math.min(booked, s.capacity);
   const available = Math.max(0, capacity - booked);
